@@ -10,26 +10,26 @@ echo "Starting process..."
 echo "Using embedding: $EMBEDDING"
 
 # ===== Test Ground Truth =====
-BASE_PATH_GROUP1="../ground_truth/random"
+BASE_PATH_GROUP1="../data/random"
 NAMES_GROUP1=(random)
 
 # ===== Ground Truth =====
-BASE_PATH_GROUP2="../ground_truth/all"
+BASE_PATH_GROUP2="../data/all"
 NAMES_GROUP2=(1_aeharding.voyager 2_commons-app.apps-android-commons 4_crawl.crawl 5_d4rken-org.sdmaid-se)
 
-BASE_PATH_GROUP3="../ground_truth/all"
+BASE_PATH_GROUP3="../data/all"
 NAMES_GROUP3=(6_element-hq.element-android 7_element-hq.element-x-android 8_fossasia.pstab-app 9_horizontalsystems.unstoppable-wallet-android)
 
-BASE_PATH_GROUP4="../ground_truth/all"
+BASE_PATH_GROUP4="../data/all"
 NAMES_GROUP4=(10_hydgard.ppsspp 11_immich-app.immich 12_jellyfin.jellyfin-androidtv 13_Jigsaw-Code.outline-apps)
 
-BASE_PATH_GROUP5="../ground_truth/all"
+BASE_PATH_GROUP5="../data/all"
 NAMES_GROUP5=(15_johannesjo.super-productivity 16_laurent22.joplin 17_LemmyNet.jerboa 18_luanti-org.luanti)
 
-BASE_PATH_GROUP6="../ground_truth/all"
+BASE_PATH_GROUP6="../data/all"
 NAMES_GROUP6=(19_mullvad.mullvadvpn-app 20_nextcloud.talk-android 21_organicmaps.organicmaps 23_owntracks.android)
 
-BASE_PATH_GROUP7="../ground_truth/all"
+BASE_PATH_GROUP7="../data/all"
 NAMES_GROUP7=(25_simplex-chat.simplex-chat 27_streetwriters.notesnook 28_tasks.tasks 30_xbmc.xbmc)
 
 
