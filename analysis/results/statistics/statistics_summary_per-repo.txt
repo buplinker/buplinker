@@ -1,0 +1,27 @@
+Running elapsed month difference tests and trend analyses...
+Minimum repo count per month: 5
+Data scope: per-repo
+
+=== Linked ratio (UR) ===
+Dataset summary: 864 samples | 24 repos | 36 months
+Descriptive statistics: mean=0.2963, median=0.2500, IQR=[0.0000, 0.5000] (range=0.5000), variance=0.0882, std=0.2970
+Group comparison result: method=kruskal-wallis, statistic=44.2543, p-value=0.1358, groups=36, sizes=(0:24, 1:24, 2:24, 3:24, 4:24, 5:24, 6:24, 7:24, 8:24, 9:24, 10:24, 11:24, 12:24, 13:24, 14:24, 15:24, 16:24, 17:24, 18:24, 19:24, 20:24, 21:24, 22:24, 23:24, 24:24, 25:24, 26:24, 27:24, 28:24, 29:24, 30:24, 31:24, 32:24, 33:24, 34:24, 35:24)
+Trend analysis result: tau=-0.0540 (p=0.6433), slope=-0.0064/year [-0.0316, 0.0274], n=36
+
+=== Linked time (UR) ===
+Dataset summary: 563 samples | 24 repos | 36 months
+Descriptive statistics: mean=181.5884, median=181.2832, IQR=[140.2215, 229.1000] (range=88.8785), variance=5191.9394, std=72.0551
+Group comparison result: method=anova, statistic=1.1585, p-value=0.2483, groups=36, sizes=(0:24, 1:20, 2:16, 3:14, 4:17, 5:15, 6:19, 7:17, 8:17, 9:16, 10:14, 11:16, 12:19, 13:17, 14:17, 15:18, 16:17, 17:16, 18:16, 19:15, 20:19, 21:19, 22:14, 23:14, 24:16, 25:16, 26:15, 27:13, 28:15, 29:14, 30:15, 31:13, 32:12, 33:10, 34:9, 35:9)
+Trend analysis result: tau=-0.2159 (p=0.06396), slope=-7.2624/year [-15.0854, 0.8862], n=36
+
+=== Linked ratio (PR) ===
+Dataset summary: 864 samples | 24 repos | 36 months
+Descriptive statistics: mean=0.2533, median=0.2270, IQR=[0.0000, 0.4080] (range=0.4080), variance=0.0606, std=0.2462
+Group comparison result: method=kruskal-wallis, statistic=17.2634, p-value=0.9948, groups=36, sizes=(0:24, 1:24, 2:24, 3:24, 4:24, 5:24, 6:24, 7:24, 8:24, 9:24, 10:24, 11:24, 12:24, 13:24, 14:24, 15:24, 16:24, 17:24, 18:24, 19:24, 20:24, 21:24, 22:24, 23:24, 24:24, 25:24, 26:24, 27:24, 28:24, 29:24, 30:24, 31:24, 32:24, 33:24, 34:24, 35:24)
+Trend analysis result: tau=-0.1714 (p=0.1413), slope=-0.0107/year [-0.0239, 0.0033], n=36
+
+=== Linked time (PR) ===
+Dataset summary: 593 samples | 24 repos | 36 months
+Descriptive statistics: mean=41.9705, median=15.6394, IQR=[7.0000, 37.2069] (range=30.2069), variance=5128.7414, std=71.6152
+Group comparison result: method=kruskal-wallis, statistic=27.8338, p-value=0.8001, groups=36, sizes=(0:24, 1:15, 2:17, 3:19, 4:17, 5:16, 6:17, 7:19, 8:20, 9:18, 10:18, 11:18, 12:21, 13:18, 14:19, 15:16, 16:17, 17:17, 18:18, 19:18, 20:18, 21:17, 22:17, 23:18, 24:18, 25:16, 26:13, 27:14, 28:13, 29:12, 30:13, 31:13, 32:13, 33:13, 34:11, 35:12)
+Trend analysis result: tau=-0.0095 (p=0.9349), slope=-0.1322/year [-4.7863, 5.2721], n=36

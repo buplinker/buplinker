@@ -1,0 +1,24 @@
+query ($owner: String!, $name: String!, $first: Int!, $after: String) {
+  repository(owner: $owner, name: $name) {
+    releases(first: $first, after: $after) {
+      nodes {
+        id
+        tag {
+          name
+        }
+        name
+        createdAt
+        publishedAt
+        url
+        author {
+          login
+        }
+      }
+      pageInfo {
+        endCursor
+        hasNextPage
+      }
+    }
+  }
+}
+
