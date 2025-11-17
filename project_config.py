@@ -1,0 +1,3 @@
+# GPT-4.1 settings
+OPENAI_MODEL = "gpt-4.1-2025-04-14"
+OPENAI_TEMPERATURE = 0.0

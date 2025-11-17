@@ -1,0 +1,28 @@
+Running elapsed month difference tests and trend analyses...
+Adjusting minimum repo count per month to 1 for all-repos aggregated data.
+Minimum repo count per month: 1
+Data scope: all-repos
+
+=== Linked ratio (UR) ===
+Dataset summary: 36 samples | 1 repos | 36 months
+Descriptive statistics: mean=0.3604, median=0.3672, IQR=[0.3110, 0.4125] (range=0.1015), variance=0.0045, std=0.0668
+Group comparison result: method=kruskal-wallis, statistic=35.0000, p-value=0.4682, groups=36, sizes=(0:1, 1:1, 2:1, 3:1, 4:1, 5:1, 6:1, 7:1, 8:1, 9:1, 10:1, 11:1, 12:1, 13:1, 14:1, 15:1, 16:1, 17:1, 18:1, 19:1, 20:1, 21:1, 22:1, 23:1, 24:1, 25:1, 26:1, 27:1, 28:1, 29:1, 30:1, 31:1, 32:1, 33:1, 34:1, 35:1)
+Trend analysis result: tau=0.0635 (p=0.5859), slope=0.0101/year [-0.0244, 0.0394], n=36
+
+=== Linked time (UR) ===
+Dataset summary: 36 samples | 1 repos | 36 months
+Descriptive statistics: mean=180.3893, median=179.0174, IQR=[163.2067, 193.2634] (range=30.0567), variance=375.1822, std=19.3696
+Group comparison result: method=kruskal-wallis, statistic=35.0000, p-value=0.4682, groups=36, sizes=(0:1, 1:1, 2:1, 3:1, 4:1, 5:1, 6:1, 7:1, 8:1, 9:1, 10:1, 11:1, 12:1, 13:1, 14:1, 15:1, 16:1, 17:1, 18:1, 19:1, 20:1, 21:1, 22:1, 23:1, 24:1, 25:1, 26:1, 27:1, 28:1, 29:1, 30:1, 31:1, 32:1, 33:1, 34:1, 35:1)
+Trend analysis result: tau=-0.2159 (p=0.06396), slope=-7.2624/year [-15.0854, 0.8862], n=36
+
+=== Linked ratio (PR) ===
+Dataset summary: 36 samples | 1 repos | 36 months
+Descriptive statistics: mean=0.2992, median=0.2977, IQR=[0.2801, 0.3244] (range=0.0443), variance=0.0015, std=0.0392
+Group comparison result: method=kruskal-wallis, statistic=35.0000, p-value=0.4682, groups=36, sizes=(0:1, 1:1, 2:1, 3:1, 4:1, 5:1, 6:1, 7:1, 8:1, 9:1, 10:1, 11:1, 12:1, 13:1, 14:1, 15:1, 16:1, 17:1, 18:1, 19:1, 20:1, 21:1, 22:1, 23:1, 24:1, 25:1, 26:1, 27:1, 28:1, 29:1, 30:1, 31:1, 32:1, 33:1, 34:1, 35:1)
+Trend analysis result: tau=-0.0127 (p=0.9132), slope=-0.0011/year [-0.0177, 0.0122], n=36
+
+=== Linked time (PR) ===
+Dataset summary: 36 samples | 1 repos | 36 months
+Descriptive statistics: mean=42.3656, median=40.9718, IQR=[33.1709, 49.0156] (range=15.8447), variance=121.9637, std=11.0437
+Group comparison result: method=kruskal-wallis, statistic=35.0000, p-value=0.4682, groups=36, sizes=(0:1, 1:1, 2:1, 3:1, 4:1, 5:1, 6:1, 7:1, 8:1, 9:1, 10:1, 11:1, 12:1, 13:1, 14:1, 15:1, 16:1, 17:1, 18:1, 19:1, 20:1, 21:1, 22:1, 23:1, 24:1, 25:1, 26:1, 27:1, 28:1, 29:1, 30:1, 31:1, 32:1, 33:1, 34:1, 35:1)
+Trend analysis result: tau=-0.0095 (p=0.9349), slope=-0.1322/year [-4.7863, 5.2721], n=36
