@@ -80,7 +80,7 @@ class LinkedTimePlotter:
     """Create monthly mean diff_time plots grouped by repository."""
 
     def __init__(self):
-        base_path = Path(__file__).parent.parent
+        base_path = Path(__file__).parent
         self.data_path = base_path / "time_processed_data"
 
         output_root = base_path / "results" / "linked_time"
