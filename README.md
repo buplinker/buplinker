@@ -1,5 +1,7 @@
 ## Hi there 👋
 
+Please place the following data into `buplinker/data/all`:
+https://drive.google.com/drive/folders/1eqfou_mbbqI0TqtCD8mk0l4BYTjavuxa?usp=sharing
 <!--
 **buplinker/buplinker** is a ✨ _special_ ✨ repository because its `README.md` (this file) appears on your GitHub profile.
 
