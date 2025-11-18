@@ -485,12 +485,18 @@ class LinkedRatioPlotter:
             repo_not_linked_ratio + repo_linked_ratio, a_min=0.0, a_max=1.0
         )
 
+        # Only write months with data (repo_total > 0)
+        valid_mask = active_mask
+        if not np.any(valid_mask):
+            return None
+
+        valid_month_indices = month_indices[valid_mask]
         csv_path = self.csv_path / f"{repo.id}_{repo.owner}.{repo.name}_{content_type.value}_linked_ratio.csv"
         write_counts_csv(
             [
-                ("not_linked", pd.Series(repo_not_linked_ratio, index=month_indices)),
-                ("linked", pd.Series(repo_linked_ratio, index=month_indices)),
-                ("total", pd.Series(repo_total_ratio, index=month_indices)),
+                ("not_linked", pd.Series(repo_not_linked_ratio[valid_mask], index=valid_month_indices)),
+                ("linked", pd.Series(repo_linked_ratio[valid_mask], index=valid_month_indices)),
+                ("total", pd.Series(repo_total_ratio[valid_mask], index=valid_month_indices)),
             ],
             index_name="elapsed_month",
             output_csv=csv_path,
@@ -498,10 +504,6 @@ class LinkedRatioPlotter:
             enforce_integer=False,
             value_round=6,
         )
-
-        valid_mask = active_mask
-        if not np.any(valid_mask):
-            return None
 
         elapsed_months_arr = np.nonzero(valid_mask)[0].astype(int)
         linked_ratio_values = repo_linked_ratio[valid_mask]
@@ -624,8 +626,14 @@ class LinkedRatioPlotter:
             monthly_not_linked + monthly_linked, a_min=0.0, a_max=1.0
         )
 
-        repo_count_series = pd.Series(np.round(repo_counts).astype(int), index=month_indices)
-        total_count_series = pd.Series(np.round(monthly_total_count).astype(int), index=month_indices)
+        # Only write months with data (repo_counts > 0)
+        valid_bins = repo_counts > 0
+        if not np.any(valid_bins):
+            return None
+
+        valid_month_indices = month_indices[valid_bins]
+        repo_count_series = pd.Series(np.round(repo_counts[valid_bins]).astype(int), index=valid_month_indices)
+        total_count_series = pd.Series(np.round(monthly_total_count[valid_bins]).astype(int), index=valid_month_indices)
         extra_series = {
             "repo_count": repo_count_series,
             "count": total_count_series,
@@ -634,9 +642,9 @@ class LinkedRatioPlotter:
         csv_path = self.csv_path / f"all_repos_{content_type.value}_linked_ratio.csv"
         write_counts_csv(
             [
-                ("not_linked", pd.Series(monthly_not_linked, index=month_indices)),
-                ("linked", pd.Series(monthly_linked, index=month_indices)),
-                ("total", pd.Series(monthly_total, index=month_indices)),
+                ("not_linked", pd.Series(monthly_not_linked[valid_bins], index=valid_month_indices)),
+                ("linked", pd.Series(monthly_linked[valid_bins], index=valid_month_indices)),
+                ("total", pd.Series(monthly_total[valid_bins], index=valid_month_indices)),
             ],
             index_name="elapsed_month",
             output_csv=csv_path,
@@ -645,10 +653,6 @@ class LinkedRatioPlotter:
             value_round=6,
             extra_series=extra_series,
         )
-
-        valid_bins = repo_counts > 0
-        if not np.any(valid_bins):
-            return None
 
         x_values_rel = x_years[valid_bins]
         linked_ratio_values = monthly_linked[valid_bins]
