@@ -197,7 +197,7 @@ def build_combined_csv_summaries() -> None:
             rows_by_metric[row.metric_key].append(row)
 
     headers = ["metric_label", "view", "content_type", "dataset_summary", 
-               "descriptive_statistics", "group_test_summary", "trend_test_summary"]
+               "descriptive_statistics", "trend_test_summary", "group_test_summary"]
     for metric_key, rows in rows_by_metric.items():
         output_path = COMBINED_OUTPUT_FILES[metric_key]
         output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -206,7 +206,7 @@ def build_combined_csv_summaries() -> None:
             writer.writerow(headers)
             writer.writerows([
                 [r.metric_label, r.view, r.content_type, r.dataset_summary,
-                 r.descriptive_statistics, r.group_summary, r.trend_summary]
+                 r.descriptive_statistics, r.trend_summary, r.group_summary]
                 for r in rows
             ])
 
