@@ -1,6 +1,6 @@
 import os
 import sys
-from util import clean_text, NDCG_at_K, Hit_at_K, precision_at_K, recall_at_K, MRR, results_to_df_llm, recall, precision, F1_score, get_group_key
+from util import clean_text, results_to_df_llm, recall, precision, F1_score, get_group_key
 
 # プロジェクトルートをパスに追加（他のインポートの前に実行）
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
@@ -45,14 +45,41 @@ def normalize_group_id(value):
         return str(value)
     return str(value)
 
+def format_original_prompt(text, top_k_results, group_type='ur_pr'):
+    if group_type == GroupType.UR_PR.value:
+        prompt = (
+            f"Given the following user review:\n\n"
+            f"{text}\n\n"
+            f"Rerank the provided pull requests based on their relevance to the user review. "
+            f"Only output the pull request IDs in descending order of relevance, formatted as follows:\n"
+            f"['1-{{pr_id}}', '2-{{pr_id}}', '3-{{pr_id}}', ...]\n\n"
+            f"Do not include any additional text or explanation in the output.\n\n"
+            f"Pull Requests:\n"
+        )
 
-def format_prompt(text, top_k_results, group_type='ur_pr', prompt_type='rerank', prompt_with_relevance=False, use_gpt5=False):
-    prompts_dir = os.path.join(os.path.dirname(__file__), f"{group_type}/prompts")
-    
-    if use_gpt5:
-        system_prompt_filename = f"{prompt_type}_system_with_reason_gpt5.txt"
+        for ur_id, pr_id, sim_score, create_date, pull_request_date, latest_release_date, user_review, pull_request, url, author, target in top_k_results:
+            prompt += f"Pull Request ID: {pr_id}. Pull Request Title/Description: {pull_request}\n"
     else:
-        system_prompt_filename = f"{prompt_type}_system_with_relevance.txt" if prompt_with_relevance else f"{prompt_type}_system.txt"
+        prompt = (
+            f"Given the following pull request:\n\n"
+            f"{text}\n\n"
+            f"Rerank the provided user reviews based on their relevance to the pull request. "
+            f"Only output the user review IDs in descending order of relevance, formatted as follows:\n"
+            f"['1-{{ur_id}}', '2-{{ur_id}}', '3-{{ur_id}}', ...]\n\n"
+            f"Do not include any additional text or explanation in the output.\n\n"
+            f"User Reviews:\n"
+        )
+
+        for ur_id, pr_id, sim_score, create_date, pull_request_date, latest_release_date, user_review, pull_request, url, author, target in top_k_results:
+            prompt += f"User Review ID: {ur_id}. User Review: {user_review}\n"
+    
+    return [{"role": "user", "content": prompt}]
+
+
+def format_new_prompt(text, top_k_results, group_type='ur_pr'):
+    prompts_dir = os.path.join(os.path.dirname(__file__), f"prompts/{group_type}")
+    
+    system_prompt_filename = "identify_system_with_relevance.txt"
     with open(os.path.join(prompts_dir, system_prompt_filename), "r", encoding="utf-8") as f:
         system_prompt = f.read().strip()
     
@@ -78,12 +105,9 @@ def format_prompt(text, top_k_results, group_type='ur_pr', prompt_type='rerank',
             user_reviews=user_reviews_text
         )
     
-    if use_gpt5:
-        return [{"role": "developer", "content": system_prompt}, {"role": "user", "content": user_prompt}]
-    else:
-        return [{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}]
+    return [{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}]
 
-def results_with_gpt(df: pd.DataFrame, query_text, results, top_k, prompt_type='original', group_type='ur_pr', prompt_with_relevance=False, use_gpt5=False) -> Tuple[List[Dict[str, Any]], int, int, List[Dict[str, Any]]]:
+def results_with_gpt(query_text, results, top_k, group_type='ur_pr') -> Tuple[List[Dict[str, Any]], int, int, List[Dict[str, Any]]]:
     prompt_tokens = 0
     completion_tokens = 0
     warnings: List[Dict[str, Any]] = []
@@ -91,28 +115,19 @@ def results_with_gpt(df: pd.DataFrame, query_text, results, top_k, prompt_type='
     if len(results) <= top_k:
         print(f"Fewer than {top_k} results, reranking all available.")
         top_k_results = results
-        remaining_results = []
     else:
         top_k_results = results[:top_k] 
-        remaining_results = results[top_k:]  
 
     client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
     
     try:
-        messages = format_prompt(query_text, top_k_results, group_type, prompt_type, prompt_with_relevance, use_gpt5)
+        messages = format_new_prompt(query_text, top_k_results, group_type)
        
-        if args.use_gpt5:
-            chat_completion = client.chat.completions.create(
-                messages=messages,
-                model=config.OPENAI_MODEL_GPT5,
-                reasoning_effort=config.OPENAI_REASONING_EFFORT,
-            )
-        else:
-            chat_completion = client.chat.completions.create(
-                messages=messages,
-                model=config.OPENAI_MODEL,
-                temperature=config.OPENAI_TEMPERATURE, 
-            )
+        chat_completion = client.chat.completions.create(
+            messages=messages,
+            model=config.OPENAI_MODEL,
+            temperature=config.OPENAI_TEMPERATURE, 
+        )
 
         if hasattr(chat_completion, "usage") and chat_completion.usage:
             prompt_tokens = getattr(chat_completion.usage, "prompt_tokens", 0)
@@ -120,42 +135,29 @@ def results_with_gpt(df: pd.DataFrame, query_text, results, top_k, prompt_type='
 
         response_message = chat_completion.choices[0].message.content.strip()
 
-        # Parse the response based on prompt type
-        if prompt_with_relevance:
-            # Extract JSON from response (in case there's extra text before/after)
-            # Match both dict format { ... } and list format [ ... ]
-            json_match = re.search(r'(\{.*\}|\[.*\])', response_message, re.DOTALL)
-            if json_match:
-                json_text = json_match.group()
-            else:
-                json_text = response_message
-            
-            try:
-                response_data = json.loads(json_text)
-                
-                # Handle both list format [] and dict format {'links': [...]}
-                if isinstance(response_data, list):
-                    # If response is a list, treat it as empty links
-                    links = []
-                elif isinstance(response_data, dict):
-                    # If response is a dict, extract links
-                    links = response_data.get('links', [])
-                else:
-                    links = []
-                
-                reranked_ids = [item['id'] for item in links if isinstance(item, dict) and 'id' in item]
-                reranked_ids_to_relevance = {item['id']: item['relevance'] for item in links if isinstance(item, dict) and 'id' in item and 'relevance' in item}
-            except json.JSONDecodeError as e:
-                print(f"JSON parsing error: {e}")
-                print(f"JSON text: {json_text}")
-                raise e
+        json_match = re.search(r'(\{.*\}|\[.*\])', response_message, re.DOTALL)
+        if json_match:
+            json_text = json_match.group()
         else:
-            # Parse the response into a list of commit IDs (original format)
-            reranked_ids = [
-                line.strip("[]'\" ").split("-", 1)[1]  # 最初の'-'のみで分割
-                for line in response_message.split(",") 
-                if "-" in line
-            ]
+            json_text = response_message
+        try:
+            response_data = json.loads(json_text)
+            # Handle both list format [] and dict format {'links': [...]}
+            if isinstance(response_data, list):
+                # If response is a list, treat it as empty links
+                links = []
+            elif isinstance(response_data, dict):
+                # If response is a dict, extract links
+                links = response_data.get('links', [])
+            else:
+                links = []
+            
+            reranked_ids = [item['id'] for item in links if isinstance(item, dict) and 'id' in item]
+            reranked_ids_to_relevance = {item['id']: item['relevance'] for item in links if isinstance(item, dict) and 'id' in item and 'relevance' in item}
+        except json.JSONDecodeError as e:
+            print(f"JSON parsing error: {e}")
+            print(f"JSON text: {json_text}")
+            raise e
         
         if len(reranked_ids) == 0:
             warnings.append({"code": "no_ids_returned"})
@@ -165,7 +167,7 @@ def results_with_gpt(df: pd.DataFrame, query_text, results, top_k, prompt_type='
         else:
             id_to_data = {ur_id: (pr_id, sim_score, create_date, pull_request_date, latest_release_date, user_review, pull_request, url, author, target) for ur_id, pr_id, sim_score, create_date, pull_request_date, latest_release_date, user_review, pull_request, url, author, target in top_k_results}
 
-        final_results, reranked_top_k_results = [], []
+        reranked_top_k_results = []
         processed_ids = set()  # GPTから返ってきたIDを追跡
         invalid_ids = []
         
@@ -193,71 +195,18 @@ def results_with_gpt(df: pd.DataFrame, query_text, results, top_k, prompt_type='
                     "author": author,
                     "label": target
                 }
-                if prompt_with_relevance:
-                    result_dict["relevance"] = reranked_ids_to_relevance.get(id_val, '')
+                result_dict["relevance"] = reranked_ids_to_relevance.get(id_val, '')
                 reranked_top_k_results.append(result_dict)
             else:
                 invalid_ids.append(id_val)
         
         if invalid_ids:
             warnings.append({"code": "invalid_ids_returned", "details": invalid_ids})
-        
-        if prompt_type != PromptType.IDENTIFY.value:
-            # GPTから返ってこなかったデータを追加（元の順序を保持）
-            current_rank = len(reranked_top_k_results) + 1
-            
-            for ur_id, pr_id, sim_score, create_date, pull_request_date, latest_release_date, user_review, pull_request, url, author, target in top_k_results:
-                if group_type == GroupType.UR_PR.value:
-                    check_id = pr_id
-                else:
-                    check_id = ur_id
-                
-                # GPTから返ってこなかったデータのみ追加
-                if check_id not in processed_ids:
-                    result_dict = {
-                        "rank": current_rank,
-                        "ur_id": ur_id,
-                        "pr_id": pr_id,
-                        "similarity_score": float(sim_score),
-                        "create_date": create_date,
-                        "pull_request_date": pull_request_date,
-                        "latest_release_date": latest_release_date,
-                        "user_review": user_review,
-                        "pull_request": pull_request,
-                        "url": url,
-                        "author": author,
-                        "label": target
-                    }
-                    if prompt_with_relevance:
-                        result_dict["relevance"] = ""  # 不足データには関連度なし
-                    reranked_top_k_results.append(result_dict)
-                    current_rank += 1
-
-        if args.prompt_type == PromptType.IDENTIFY.value:
-            final_results = reranked_top_k_results
-        else:
-            final_results = reranked_top_k_results + [
-                {
-                    "rank": idx + len(reranked_top_k_results),
-                    "ur_id": ur_id,
-                    "pr_id": pr_id,
-                    "similarity_score": float(sim_score),
-                    "create_date": create_date,
-                    "pull_request_date": pull_request_date,
-                    "latest_release_date": latest_release_date,
-                    "user_review": user_review,
-                    "pull_request": pull_request,
-                    "url": url,
-                    "author": author,
-                    "label": target
-                }
-                for idx, (ur_id, pr_id, sim_score, create_date, pull_request_date, latest_release_date, user_review, pull_request, url, author, target) in enumerate(remaining_results, start=1)
-            ]
 
         if len(reranked_top_k_results) == 0:
             warnings.append({"code": "no_results_after_processing"})
 
-        return final_results, prompt_tokens, completion_tokens, warnings
+        return reranked_top_k_results, prompt_tokens, completion_tokens, warnings
 
     except Exception as e:
         print(f"Error during OpenAI API call or response parsing: {e}")
@@ -271,29 +220,14 @@ if __name__ == "__main__":
     parser.add_argument('--csv_file', type=str, required=True, help="Path to the CSV file")
     parser.add_argument('--index_dir', type=str, required=True, help="Directory for FAISS index")
     parser.add_argument('--output_result_path', type=str, required=True, help="Path to save the evaluation results")
-    parser.add_argument('--embedding_selected', type=str, required=True, help="Path to save the evaluation results")
     parser.add_argument('--top_k', type=int, required=True, help="Top k results to rerank")
-    parser.add_argument('--prompt_type', type=str, required=True, help="Prompt type: 'original' or 'rerank' or 'identify' (default: 'original')")
-    parser.add_argument('--prompt_with_relevance', action='store_true', default=False, help="Prompt with relevance (default: False)")
-    parser.add_argument('--use_gpt5', action='store_true', default=False, help="Use GPT-5 (default: False)")
 
     args = parser.parse_args()
-
-    embedding_selected = args.embedding_selected
-    if embedding_selected == "OpenAIEmbeddings":
-        embeddings = OpenAIEmbeddings(openai_api_key=os.getenv("OPENAI_API_KEY"))  # already normalized
-    elif embedding_selected == "HuggingFace-mpnet":
-        embeddings = HuggingFaceEmbeddings(
-            model_name="sentence-transformers/all-mpnet-base-v2",
-            encode_kwargs={"normalize_embeddings": True}  # normalize at source
-        )
-    elif embedding_selected == "HuggingFace-minilm":
-        embeddings = HuggingFaceEmbeddings(
-            model_name="sentence-transformers/all-MiniLM-L6-v2",
-            encode_kwargs={"normalize_embeddings": True}  # normalize at source
-        )
-    else:
-        raise ValueError(f"Unknown embedding model: {embedding_selected}")
+    
+    embeddings = HuggingFaceEmbeddings(
+        model_name="sentence-transformers/all-MiniLM-L6-v2",
+        encode_kwargs={"normalize_embeddings": True}  # normalize at source
+    )
 
     print("Starting processing...")
 
@@ -462,7 +396,7 @@ if __name__ == "__main__":
                     target)
                 )
 
-        reranked_results, in_tok, out_tok, warnings = results_with_gpt(df, query, input_results, args.top_k, args.prompt_type, args.group_type, args.prompt_with_relevance, args.use_gpt5)
+        reranked_results, in_tok, out_tok, warnings = results_with_gpt(query, input_results, args.top_k, args.group_type)
         total_prompt_tokens += in_tok
         total_completion_tokens += out_tok
 
@@ -514,7 +448,7 @@ if __name__ == "__main__":
         print("Results file is empty; exiting without computing metrics.")
         sys.exit(0)
 
-    if args.prompt_with_relevance and 'relevance' in results_df.columns:
+    if 'relevance' in results_df.columns:
         results_df = results_df.loc[results_df['relevance'].isin(['high', 'medium'])]
 
     results_df = results_df.sort_values(by=[group_key, 'rank']).reset_index(drop=True)
@@ -525,50 +459,18 @@ if __name__ == "__main__":
 
     print(f"Results saved to {csv_path} and {json_path}")
 
-    metrics = None  
-    if args.prompt_type == PromptType.IDENTIFY.value:      
-        recall = recall(df, results_df)
-        print("  Final test recall %f" % (recall))
-        precision = precision(results_df)
-        print("  Final test precision %f" % (precision))
-        F1_score = F1_score(precision, recall)
-        print("  Final test F1_score %f" % (F1_score))
-        
-        metrics = {
-            "Recall": float(recall),
-            "Precision": float(precision),
-            "F1_score": float(F1_score),
-        }
-
-    else:
-        print("begin calculate metrics")
-        Hit = Hit_at_K(results_df, 1, args.group_type)
-        print("  Final test Hit@1 %f" % (Hit) )
-        Hit10 = Hit_at_K(results_df, 10, args.group_type)
-        print("  Final test Hit@10 %f" % (Hit10) )
-        precision = precision_at_K(results_df, 1, args.group_type)
-        print("  Final test precision@1 %f" % (precision) )  
-        precision10 = precision_at_K(results_df, 10, args.group_type)
-        print("  Final test precision@10 %f" % (precision10))
-        recall10 = recall_at_K(results_df, 10, args.group_type)
-        print("  Final test recall@10 %f" % (recall10))
-        mrr = MRR(results_df, args.group_type)
-        print("  Final test MRR %f" % (mrr)) 
-        ngcg = NDCG_at_K(results_df, k=1, group_type=args.group_type)
-        print("  Final test ndcg@1 %f" % (ngcg))
-        ngcg10 = NDCG_at_K(results_df, k=10, group_type=args.group_type)
-        print("  Final test ndcg@10 %f" % (ngcg10)) 
-
-        metrics = {
-            "Hit@1": float(Hit),
-            "Hit@10": float(Hit10),
-            "Precision@1": float(precision),
-            "Precision@10": float(precision10),
-            "Recall@10": float(recall10),
-            "MRR": float(mrr),
-            "NDCG@1": float(ngcg),
-            "NDCG@10": float(ngcg10),
-        }
+    recall = recall(df, results_df)
+    print("  Final test recall %f" % (recall))
+    precision = precision(results_df)
+    print("  Final test precision %f" % (precision))
+    F1_score = F1_score(precision, recall)
+    print("  Final test F1_score %f" % (F1_score))
+    
+    metrics = {
+        "Recall": float(recall),
+        "Precision": float(precision),
+        "F1_score": float(F1_score),
+    }
     
     runtime_seconds = time.time() - run_start
 
@@ -581,23 +483,21 @@ if __name__ == "__main__":
             existing_summary = {}
 
     summary = {
-        'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        "timestamp": datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
         "csv_file": args.csv_file,
         "index_dir": args.index_dir,
         "output_result_path": args.output_result_path,
-        "embedding_selected": args.embedding_selected,
-        "num_rows": int(len(results_df)),
-        "num_ur_ids": int(df["ur_id"].nunique()) if "ur_id" in df.columns else None,
+        "input_num_ur_ids": int(df["ur_id"].nunique()) if "ur_id" in df.columns else None,
+        "input_num_pr_ids": int(df["pr_id"].nunique()) if "pr_id" in df.columns else None,
+        "input_num_rows": int(len(df)),
+        "output_num_ur_ids": int(results_df["ur_id"].nunique()) if "ur_id" in results_df.columns else None,
+        "output_num_pr_ids": int(results_df["pr_id"].nunique()) if "pr_id" in results_df.columns else None,
+        "output_num_rows": int(len(results_df)),
         "runtime_seconds": round(existing_summary.get("runtime_seconds", 0) + runtime_seconds, 3),
         "metrics": metrics,
         "gpt_prompt_tokens": int(existing_summary.get("gpt_prompt_tokens", 0) + total_prompt_tokens),
         "gpt_completion_tokens": int(existing_summary.get("gpt_completion_tokens", 0) + total_completion_tokens),
         "gpt_total_tokens": int(existing_summary.get("gpt_total_tokens", 0) + total_prompt_tokens + total_completion_tokens),
-        "preprocessing": {
-            "prompt_type": args.prompt_type,
-            "prompt_with_relevance": args.prompt_with_relevance,
-            "use_gpt5": args.use_gpt5,
-        }
     }
     with open(summary_path, "w", encoding="utf-8") as f:
         json.dump(summary, f, ensure_ascii=False, indent=2)

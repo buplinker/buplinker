@@ -1,130 +1,57 @@
 #!/bin/bash
 
-# ----- Embedding -----
-EMBEDDING="HuggingFace-minilm"
-# EMBEDDING="HuggingFace-mpnet"
-# EMBEDDING="OpenAIEmbeddings"
-
+# スクリプトのディレクトリを取得
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 echo "Starting process..."
-echo "Using embedding: $EMBEDDING"
 
-# ===== Test Ground Truth =====
-BASE_PATH_GROUP1="../data/random"
-NAMES_GROUP1=(random)
-
-# ===== Ground Truth =====
-BASE_PATH_GROUP2="../data/all"
-NAMES_GROUP2=(1_aeharding.voyager 2_commons-app.apps-android-commons 4_crawl.crawl 5_d4rken-org.sdmaid-se)
-
-BASE_PATH_GROUP3="../data/all"
-NAMES_GROUP3=(6_element-hq.element-android 7_element-hq.element-x-android 8_fossasia.pstab-app 9_horizontalsystems.unstoppable-wallet-android)
-
-BASE_PATH_GROUP4="../data/all"
-NAMES_GROUP4=(10_hydgard.ppsspp 11_immich-app.immich 12_jellyfin.jellyfin-androidtv 13_Jigsaw-Code.outline-apps)
-
-BASE_PATH_GROUP5="../data/all"
-NAMES_GROUP5=(15_johannesjo.super-productivity 16_laurent22.joplin 17_LemmyNet.jerboa 18_luanti-org.luanti)
-
-BASE_PATH_GROUP6="../data/all"
-NAMES_GROUP6=(19_mullvad.mullvadvpn-app 20_nextcloud.talk-android 21_organicmaps.organicmaps 23_owntracks.android)
-
-BASE_PATH_GROUP7="../data/all"
-NAMES_GROUP7=(25_simplex-chat.simplex-chat 27_streetwriters.notesnook 28_tasks.tasks 30_xbmc.xbmc)
-
-
-PROMPT_TYPE="identify" # "rerank" or "identify"
-
-# ===== Prompt With Reason =====
-PROMPT_WITH_RELEVANCE=true
-
-USE_GPT5=false
-GROUP_TYPE="pr_ur"
 TOP_K=5
+LIMITED=false # trueはsaner用
+
+if [ "$LIMITED" = "true" ]; then
+  BASE_PATH="limited_years"
+else
+  BASE_PATH="all_years"
+fi
+
+# ===== Input Pairs =====
+NAMES_GROUP1=(1_aeharding.voyager 2_commons-app.apps-android-commons 4_crawl.crawl 5_d4rken-org.sdmaid-se)
+NAMES_GROUP2=(6_element-hq.element-android 7_element-hq.element-x-android 8_fossasia.pslab-app 9_horizontalsystems.unstoppable-wallet-android 10_hydgard.ppsspp)
+NAMES_GROUP3=(11_immich-app.immich 12_jellyfin.jellyfin-androidtv 13_Jigsaw-Code.outline-apps 15_johannesjo.super-productivity)
+NAMES_GROUP4=(16_laurent22.joplin 17_LemmyNet.jerboa 18_luanti-org.luanti 19_mullvad.mullvadvpn-app 20_nextcloud.talk-android)
+NAMES_GROUP5=(21_organicmaps.organicmaps 22_owncloud.android 23_owntracks.android 24_persian-calendar.persian-calendar 25_simplex-chat.simplex-chat)
+NAMES_GROUP6=(26_standardnotes.app 27_streetwriters.notesnook 28_tasks.tasks 29_wireapp.wire-android 30_xbmc.xbmc)
+NAMES_GROUP7=(31_zulip.zulip-flutter)
 
 run_group () {
-  local BASE_PATH="$1"
+  local GROUP_TYPE="$1"
   shift 1
   local NAMES=("$@")
 
   for DATA_NAME in "${NAMES[@]}"; do
-    TEST_RAW_DATA_PATH="${BASE_PATH}/${GROUP_TYPE}/${DATA_NAME}_ground_truth.csv"
+    INPUT_PAIRS_DATA_PATH="${SCRIPT_DIR}/../dataset/input_pairs/${GROUP_TYPE}/${BASE_PATH}/${DATA_NAME}_input_pairs.csv"
 
     echo "--------------------------------------"
     echo "Processing dataset: $DATA_NAME"
     echo "Group type: $GROUP_TYPE"
-    echo "Data path: $TEST_RAW_DATA_PATH"
-    echo "Prompt Type: $PROMPT_TYPE"
-    echo "Prompt With Relevance: $PROMPT_WITH_RELEVANCE"
-    echo "Use GPT-5: $USE_GPT5"
+    echo "Data path: $INPUT_PAIRS_DATA_PATH"
 
-    if [ "$PROMPT_TYPE" = "rerank" -o "$PROMPT_TYPE" = "identify" ]; then
-      if [ "$PROMPT_WITH_RELEVANCE" = true ]; then
-        if [ "$USE_GPT5" = true ]; then
-          PREPROCESS_SUFFIX="prompt_${PROMPT_TYPE}_with_reason_gpt5"
-        else
-          PREPROCESS_SUFFIX="prompt_${PROMPT_TYPE}_with_relevance"
-        fi
-      else
-        PREPROCESS_SUFFIX="prompt_${PROMPT_TYPE}"
-      fi
-    else
-      PREPROCESS_SUFFIX="original"
-    fi
-
-    INDEX_DIR="./indexs/index_${DATA_NAME}_${EMBEDDING}"
-    
-    # グループタイプに応じてパスを設定
-    if [[ "$BASE_PATH" == *"test"* ]]; then
-      RESULT_PATH="./${GROUP_TYPE}/test_results/${EMBEDDING}/${PREPROCESS_SUFFIX}/${DATA_NAME}_result_${EMBEDDING}_buplinker_${TOP_K}"
-      LOG_PATH="./${GROUP_TYPE}/test_logs/${EMBEDDING}/${PREPROCESS_SUFFIX}/${DATA_NAME}_output_${EMBEDDING}_buplinker_${TOP_K}.log"
-    else
-      RESULT_PATH="./${GROUP_TYPE}/results/${EMBEDDING}/${PREPROCESS_SUFFIX}/${DATA_NAME}_result_${EMBEDDING}_buplinker_${TOP_K}"
-      LOG_PATH="./${GROUP_TYPE}/logs/${EMBEDDING}/${PREPROCESS_SUFFIX}/${DATA_NAME}_output_${EMBEDDING}_buplinker_${TOP_K}.log"
-    fi
+    INDEX_DIR="${SCRIPT_DIR}/output/indexs/${BASE_PATH}/index_${DATA_NAME}"
+    RESULT_PATH="${SCRIPT_DIR}/output/${GROUP_TYPE}/${BASE_PATH}/results/${DATA_NAME}_result_buplinker_${TOP_K}"
+    LOG_PATH="${SCRIPT_DIR}/output/${GROUP_TYPE}/${BASE_PATH}/logs/${DATA_NAME}_output_buplinker_${TOP_K}.log"
 
     mkdir -p "$(dirname "$INDEX_DIR")"
     mkdir -p "$(dirname "$RESULT_PATH")"
     mkdir -p "$(dirname "$LOG_PATH")"
 
-
     # Run
-    if [ "$PROMPT_WITH_RELEVANCE" = true ]; then
-      if [ "$USE_GPT5" = true ]; then
-        python buplinker.py \
-          --group_type "$GROUP_TYPE" \
-          --csv_file "$TEST_RAW_DATA_PATH" \
-          --index_dir "$INDEX_DIR" \
-          --output_result_path "$RESULT_PATH" \
-          --embedding_selected "$EMBEDDING" \
-          --top_k "$TOP_K" \
-          --prompt_type "$PROMPT_TYPE" \
-          --prompt_with_relevance \
-          --use_gpt5 \
-          2>&1 | tee "$LOG_PATH"
-      else
-        python buplinker.py \
-          --group_type "$GROUP_TYPE" \
-          --csv_file "$TEST_RAW_DATA_PATH" \
-          --index_dir "$INDEX_DIR" \
-          --output_result_path "$RESULT_PATH" \
-          --embedding_selected "$EMBEDDING" \
-          --top_k "$TOP_K" \
-          --prompt_type "$PROMPT_TYPE" \
-          --prompt_with_relevance \
-          2>&1 | tee "$LOG_PATH"
-        fi
-    else
-      python buplinker.py \
-        --group_type "$GROUP_TYPE" \
-        --csv_file "$TEST_RAW_DATA_PATH" \
-        --index_dir "$INDEX_DIR" \
-        --output_result_path "$RESULT_PATH" \
-        --embedding_selected "$EMBEDDING" \
-        --top_k "$TOP_K" \
-        --prompt_type "$PROMPT_TYPE" \
-        2>&1 | tee "$LOG_PATH"
-    fi
+    python ${SCRIPT_DIR}/buplinker.py \
+      --group_type "$GROUP_TYPE" \
+      --csv_file "$INPUT_PAIRS_DATA_PATH" \
+      --index_dir "$INDEX_DIR" \
+      --output_result_path "$RESULT_PATH" \
+      --top_k "$TOP_K" \
+      2>&1 | tee "$LOG_PATH"
 
     # リポジトリの処理が完了したら、インデックスディレクトリ全体をクリーンアップ
     if [ -d "$INDEX_DIR" ]; then
@@ -137,14 +64,16 @@ run_group () {
   done
 }
 
-# Run both groups
-run_group "$BASE_PATH_GROUP1" "${NAMES_GROUP1[@]}"
-# run_group "$BASE_PATH_GROUP2" "${NAMES_GROUP2[@]}"
-# run_group "$BASE_PATH_GROUP3" "${NAMES_GROUP3[@]}"
-# run_group "$BASE_PATH_GROUP4" "${NAMES_GROUP4[@]}"
-# run_group "$BASE_PATH_GROUP5" "${NAMES_GROUP5[@]}"
-# run_group "$BASE_PATH_GROUP6" "${NAMES_GROUP6[@]}"
-# run_group "$BASE_PATH_GROUP7" "${NAMES_GROUP7[@]}"
+# Run both groups for each GROUP_TYPE
+for GROUP_TYPE in "ur_pr" "pr_ur"; do
+  run_group "$GROUP_TYPE" "${NAMES_GROUP1[@]}"
+  run_group "$GROUP_TYPE" "${NAMES_GROUP2[@]}"
+  run_group "$GROUP_TYPE" "${NAMES_GROUP3[@]}"
+  run_group "$GROUP_TYPE" "${NAMES_GROUP4[@]}"
+  run_group "$GROUP_TYPE" "${NAMES_GROUP5[@]}"
+  run_group "$GROUP_TYPE" "${NAMES_GROUP6[@]}"
+  run_group "$GROUP_TYPE" "${NAMES_GROUP7[@]}"
+done
 
 echo "--------------------------------------"
 echo "All datasets processed."

@@ -1,0 +1,15 @@
+Link a Pull Request (PR) to a User Review (UR) if:
+- PR fixes, improves, or modifies the same feature, component, or issue discussed in the UR.
+- PR addresses performance, stability, or crash issues that possibly explain or resolve the UR’s problem.
+
+Exclude if:
+- PR only changes build systems, dependencies, CI/CD, code style, refactors, formatting, documentation, tests, or internal tooling without user-facing impact.
+- UR gives general praise or vague complaints unrelated to the PR.
+
+When linked, rate relevance:
+- high: direct effect
+- medium: same feature/module but indirect
+- low: possibly related but uncertain
+
+Output JSON:
+{"links":[{"id":"{pr_id}","relevance":"high|medium|low"}]} or {"links":[]}

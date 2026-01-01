@@ -1,6 +1,6 @@
 ## Hi there 👋
 
-Please place the following data into `buplinker/dataset`:
+Please place the following data into `buplinker/dataset`, naming `input_pairs`:
 [https://drive.google.com/drive/folders/1eqfou_mbbqI0TqtCD8mk0l4BYTjavuxa?usp=sharing](https://drive.google.com/drive/folders/1DtnC7vLlhqXIuKDXdRs7dIGAEYxKgfNW?usp=sharing)
 <!--
 **buplinker/buplinker** is a ✨ _special_ ✨ repository because its `README.md` (this file) appears on your GitHub profile.
