@@ -1,5 +1,0 @@
-User Review:
-{user_review}
-
-Pull Requests:
-{pull_requests}

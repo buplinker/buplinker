@@ -4,7 +4,6 @@ from typing import List, Dict
 import pandas as pd
 import os
 import sys
-from pathlib import Path
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
 from root_util import GroupType
@@ -136,12 +135,3 @@ def ground_truth_to_df_llm(res: List[Dict], group_type: str = GroupType.UR_PR.va
     ).reset_index(drop=True).drop(columns=['rank'])
     
     return group_sort
-
-if __name__ == "__main__":
-    base_path = Path(__file__).parent.parent
-    for group_type in [GroupType.UR_PR, GroupType.PR_UR]:
-        df = pd.read_csv(f"{base_path}/ground_truth/random/{group_type.value}/random_ground_truth.csv")
-        results_df = pd.read_csv(f"{base_path}/code/{group_type.value}/results/HuggingFace-minilm/prompt_identify_with_relevance/random_result_HuggingFace-minilm_buplinker_5.csv")
-        print(recall(df, results_df))
-        print(precision(results_df))
-        print(F1_score(precision(results_df), recall(df, results_df)))
