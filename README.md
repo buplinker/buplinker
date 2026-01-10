@@ -1,159 +1,193 @@
-# Environment
-- Git LFS: `brew install git-lfs && git lfs install`
-- Python 3.11
-- macOS or Linux
+# BUPLinker
 
-# Setup
+BUPLinker is a tool designed to link User Reviews (UR) and Pull Requests (PR) to analyze the relationship between user feedback and software development activities.
+
+---
+
+## 💻 Environment
+
+- **OS**: macOS or Linux
+- **Python**: 3.11
+- **Git LFS**: Required for managing large files.
+  ```bash
+  brew install git-lfs && git lfs install
+  ```
+---
+## ⚙️ Setup
+
+### 1. Install Dependencies & Data
+
+Run the following commands to download the necessary models, install libraries, and extract compressed results:
 
 ```shell
+# Download FastText language identification model
 curl -O https://dl.fbaipublicfiles.com/fasttext/supervised-models/lid.176.bin
+
+# Install required Python packages
 pip install -r requirements.txt
+
+# Extract pre-computed results
 tar -xJf analysis/timeline/results.tar.xz
 tar -xJf buplinker/code/output.tar.xz
+
 ```
-Set your github auth token into `project_config.py` and cerate `.env` file and set your oprnai api key into there, like `OPENAI_API_KEY=hoge`.
 
-# How to Run BUPLinker
-## Set input data for BUPLinker
-If you don't have mysql server or if you want to run the BUPLinker,
-place the following data into `buplinker/dataset`, naming `input_pairs`:
-[https://drive.google.com/drive/folders/1eqfou_mbbqI0TqtCD8mk0l4BYTjavuxa?usp=sharing](https://drive.google.com/drive/folders/1DtnC7vLlhqXIuKDXdRs7dIGAEYxKgfNW?usp=sharing)
-If you want to creat tables and set all raw data, run the following step, how to create tables and fetch data.
+### 2. Configuration
 
-## 🗄️ How to Create Tables and Fetch Data
-### 1. Set mysgl database
-Set your mysql user, password, host, dabase into `project_config.py`. 
+* **GitHub & MySQL**: Set your GitHub Auth Token and MySQL credentials (user, password, host, database) in `project_config.py`.
+* **OpenAI API**: Create a `.env` file in the root directory and add your key:
+```text
+OPENAI_API_KEY=your_api_key_here
+```
 
-### 2. Create tables
+
+
+---
+
+## 🚀 How to Run BUPLinker
+
+### Option A: Quick Start (Using Pre-prepared Data)
+
+If you do not have a MySQL server, download the `input_pairs` dataset:
+
+1. Download from [Google Drive](https://drive.google.com/drive/folders/1eqfou_mbbqI0TqtCD8mk0l4BYTjavuxa?usp=drive_link).
+2. Place the folder according to the [Project Structure](#-project-structure).
+3. Proceed directly to [Run BUPLinker Execution](#1-run-buplinker-execution).
+
+### Option B: Full Pipeline (From Scratch)
+
+If you want to fetch raw data and create your own tables, follow these steps:
+
+#### 1. Database & Data Fetching
+
 ```bash
+# Create database tables
 python3 data_fetch/database/tables.py
-```
-### 3. Insert repository data
-```bash
+
+# Insert data from various sources
 python3 data_fetch/repositories.py
-```
-### 4. Insert user reviews
-```bash
 python3 data_fetch/google_play_data.py
-```
-### 5. Insert Github data (pull request, issue, release, pull request template, and issue template)
-```bash
 python3 data_fetch/github_data.py
+
 ```
-### 6. Extract PR / Template Titles  
-Extract and use PR tiles and templates for preprocessing.
-#### Command
+
+#### 2. Preprocessing
+
+Extract PR titles and templates for candidate selection:
 
 ```bash
 python3 buplinker/dataset/preprocess/template_extractor.py
+
 ```
 
-#### Output directory
+* Output: `buplinker/dataset/preprocess/template_title_repositories/*`
 
-```bash
-buplinker/dataset/preprocess/template_title_repositories/
-```
+#### 3. Create Input Pairs
 
-### 7. Create Input Pairs
+Filter candidate UR-PR pairs.
 
-Create candidate UR-PR pairs.
-This step is needed because BUPLinker does not compare the all UR–PR, PR-UR but filter candidate pairs.
-
-#### Command
 ```bash
 python3 buplinker/dataset/create_buplinker_input_pairs.py --limited
-```
-`--limited` means BUPLinker uses first four years data since the apps release.
-If not set the argument, BUPLinker uses all data avilable.
 
-#### Output directory
+```
+
+* `--limited`: Uses the first four years of data since the app's release.
+* (Omit the flag to use all available data).
+
+---
+
+## 📊 Execution & Analysis
+
+### 1. Run BUPLinker Execution
+
+Apply the linking algorithm to the prepared input pairs:
+
 ```bash
-buplinker/dataset/input_pairs/ur_pr/limited_years
+cd buplinker/code && bash buplinker.sh
+
 ```
-and
-```bash
-buplinker/dataset/input_pairs/pr_ur/limited_years
-```
-If you not set `--limited` as an argument, the pairs are output into `all_years` directory.
 
-## 📊 How to Run BUPLinker and Analyze the Output
+> **Note**: To switch between "limited" (4 years) and "all years", modify the `LIMITED` variable inside the `.sh` script.
 
-### 1. Run BUPLinker
-Apply BUPLinker on the prepared input pairs.
+### 2. Data Formatting for Analysis
 
-#### Command
-```bash
-bash ./buplinker/code/buplinker.sh
-```
-If you change `LIMITED` value into `false`, BUPLinker uses the four years data since the apps release.
-
-#### Output directory
-```bash
-buplinker/code/output/ur_pr/limited_years/results
-```
-and
-```bash
-buplinker/code/output/pr_ur/limited_years/results
-```
-If you change `LIMITED` value into `false`, the results are output into  `all_years` directory.
-
-### 2. Format input data for analyzing
-
-#### Command
+Format the output into timeline-friendly data:
 
 ```bash
 python3 analysis/timeline/time_processed_data/create_timeline_data.py --limited
-```
-If you not set `--limited` as an argument, the pairs are output into `all_years` directory.
 
-#### Output directory
-
-```bash
-analysis/timeline/time_processed_data/limited_years
-```
-If you not set `--limited` as an argument, the pairs are output into `all_years` directory.
-
-### 2. Analyze Linked Ratio
-
-#### Command
-
-```bash
-python3 analysis/timeline/linked_ratio.py --limited
 ```
 
-#### Output directory
+### 3. Run Analysis Metrics
 
-```bash
-analysis/timeline/results/linked_ratio/limited_years
+Generate the final statistics for linked ratio and time:
+
+| Task | Command | Output Directory |
+| --- | --- | --- |
+| **Analyze Linked Ratio** | `python3 analysis/timeline/linked_ratio.py --limited` | `analysis/timeline/results/linked_ratio/` |
+| **Analyze Linked Time** | `python3 analysis/timeline/linked_time.py --limited` | `analysis/timeline/results/linked_time/` |
+
+---
+
+## 📂 Project Structure
+
 ```
-
-### 3. Analyze Linked Time
-
-#### Command
-
-```bash
-python3 analysis/timeline/linked_time.py --limited
+buplinker/
+├── buplinker/
+│   ├── code/
+│   │   ├── buplinker.py          # Main BUPLinker execution script
+│   │   ├── buplinker.sh          # Batch processing script
+│   │   ├── util.py               # Utility functions
+│   │   ├── prompts/              # LLM prompts for UR-PR and PR-UR linking
+│   │   └── output/               # BUPLinker execution results
+│   └── dataset/
+│       ├── create_buplinker_input_pairs.py  # Generate candidate pairs
+│       ├── preprocess/
+│       │   ├── template_extractor.py            # Extract PR/Issue templates
+│       │   ├── preprocess_pr.py                 # Preprocess PR descriptions
+│       │   ├── label_user_review.py             # Label user reviews with ARdoc
+│       │   ├── label_repository.py              # Label repositories with categories
+│       │   ├── groundtruthbots.csv              # List of bot-generated PRs used during preprocessing
+│       │   ├── *template_titles.csv*            # Template title extraction results
+│       │   ├── template_titles_repositories/    # Repository template titles (per repository)
+│       │   └── prompts/                         # LLM prompts for template extraction
+│       └── input_pairs/                  # Input pair datasets
+│           ├── pr_ur/                    # PR → UR candidate pairs
+│           │   ├── *limited_random.csv*  # Evaluation results of randomly sampled data
+│           │   ├── limited_years/        # First 4 years of data
+│           │   └── all_years/            # All available years
+│           └── ur_pr/                    # UR → PR candidate pairs
+│               ├── *limited_random.csv*  # Evaluation results of randomly sampled data
+│               ├── limited_years/        # First 4 years of data
+│               └── all_years/            # All available years
+├── data_fetch/
+│   ├── database/
+│   │   ├── tables.py             # Database schema definitions
+│   │   ├── get.py                # Database read operations
+│   │   └── set.py                # Database write operations
+│   ├── github_data.py            # Fetch GitHub data (PRs, Issues, Releases)
+│   ├── google_play_data.py       # Fetch Google Play Store reviews
+│   ├── template_fetcher.py       # Fetch PR/Issue templates from GitHub
+│   └── query_templates/          # GraphQL query templates for GitHub API
+│       ├── issues.graphql
+│       ├── pullRequests.graphql
+│       └── releases.graphql
+├── analysis/
+│   └── timeline/
+│       ├── linked_ratio.py              # Analyze linking ratio metrics
+│       ├── linked_time.py               # Analyze linking time metrics
+│       ├── base_plotter.py              # Base plotting utilities
+│       ├── statistics_analyzer.py       # Statistical analysis utilities
+│       ├── statistics_types.py          # Type definitions for statistics
+│       ├── time_processed_data/         # Formatted data for timeline analysis
+│       │   ├── create_timeline_data.py  # Convert BUPLinker results to timeline format
+│       │   ├── limited_years/           # Processed data for first 4 years
+│       │   └── all_years/               # Processed data for all years
+│       └── results/                     # Analysis results and visualizations
+│           ├── linked_ratio/            # Linking ratio analysis results
+│           └── linked_time/             # Linking time analysis results
+├── project_config.py             # Configuration file (GitHub token, MySQL settings)
+├── root_util.py                  # Root-level utility functions
+├── repositories.csv              # List of analyzed repositores
+└── requirements.txt              # Python dependencies
 ```
-
-#### Output directory
-
-```bash
-analysis/timeline/results/linked_time/limited_years
-```
-
-## Structure
-
-<!--
-**buplinker/buplinker** is a ✨ _special_ ✨ repository because its `README.md` (this file) appears on your GitHub profile.
-
-Here are some ideas to get you started:
-
-- 🔭 I’m currently working on ...
-- 🌱 I’m currently learning ...
-- 👯 I’m looking to collaborate on ...
-- 🤔 I’m looking for help with ...
-- 💬 Ask me about ...
-- 📫 How to reach me: ...
-- 😄 Pronouns: ...
-- ⚡ Fun fact: ...
--->
