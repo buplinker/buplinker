@@ -16,7 +16,7 @@ fi
 
 # ===== Input Pairs =====
 NAMES_GROUP1=(1_aeharding.voyager 2_commons-app.apps-android-commons 4_crawl.crawl 5_d4rken-org.sdmaid-se)
-NAMES_GROUP2=(6_element-hq.element-android 7_element-hq.element-x-android 8_fossasia.pslab-app 9_horizontalsystems.unstoppable-wallet-android 10_hydgard.ppsspp)
+NAMES_GROUP2=(6_element-hq.element-android 7_element-hq.element-x-android 8_fossasia.pslab-app 9_horizontalsystems.unstoppable-wallet-android 10_hrydgard.ppsspp)
 NAMES_GROUP3=(11_immich-app.immich 12_jellyfin.jellyfin-androidtv 13_Jigsaw-Code.outline-apps 15_johannesjo.super-productivity)
 NAMES_GROUP4=(16_laurent22.joplin 17_LemmyNet.jerboa 18_luanti-org.luanti 19_mullvad.mullvadvpn-app 20_nextcloud.talk-android)
 NAMES_GROUP5=(21_organicmaps.organicmaps 22_owncloud.android 23_owntracks.android 24_persian-calendar.persian-calendar 25_simplex-chat.simplex-chat)

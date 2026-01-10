@@ -121,16 +121,24 @@ if __name__ == "__main__":
     plotter.create_all_repos_ur_pr_plot(all_repo_entries)
     
     # カテゴリごとのプロット
+    repo_entries_by_category: Dict[int, Dict[ContentType, Dict[CategoryType, Dict[str, Any]]]] = {}
     combined_entries: Dict[ContentType, Dict[CategoryType, Dict[str, Any]]] = {}
     for content_type in [ContentType.UR, ContentType.PR]:
         combined_entries.setdefault(content_type, {})
         for category in [CategoryType.Hedonic, CategoryType.Utilitarian]:
             repos = plotter._get_repositories_by_category()[category]
+            for repo in repos:
+                repo_entries_by_category.setdefault(repo.id, {})
+                repo_entries_by_category[repo.id].setdefault(content_type, {})
+                repo_entries_by_category[repo.id][content_type][category] = repo_entries[repo.id][content_type]
             metrics_df = plotter.calculate_all_repos_linked_metrics(repos, content_type)
             plotter.save_category_csv(category, content_type, metrics_df)
             entry = plotter._build_line_entry(metrics_df)
             combined_entries[content_type][category] = entry
     plotter.create_category_comparison_plot(combined_entries)
+
+    # 全リポジトリのカテゴリごとのプロット
+    plotter.create_ur_pr_plot_with_category_individual(repo_entries_by_category, combined_entries)
     
     # 統計情報の計算
     # アプリカテゴリ間の比較も行う

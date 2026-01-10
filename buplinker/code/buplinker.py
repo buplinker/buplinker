@@ -7,7 +7,6 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../.
 
 import argparse
 import pandas as pd
-from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain.schema import Document
 from langchain_huggingface.embeddings import HuggingFaceEmbeddings
@@ -44,6 +43,49 @@ def normalize_group_id(value):
             return str(int(value))
         return str(value)
     return str(value)
+
+def _extract_json_from_position(text, start_pos):
+    """Extract a complete JSON object/array from text starting at start_pos."""
+    if start_pos >= len(text):
+        return ""
+    
+    char = text[start_pos]
+    if char == '{':
+        open_char, close_char = '{', '}'
+    elif char == '[':
+        open_char, close_char = '[', ']'
+    else:
+        return ""
+    
+    depth = 0
+    in_string = False
+    escape_next = False
+    
+    for i in range(start_pos, len(text)):
+        c = text[i]
+        
+        if escape_next:
+            escape_next = False
+            continue
+        
+        if c == '\\':
+            escape_next = True
+            continue
+        
+        if c == '"' and not escape_next:
+            in_string = not in_string
+            continue
+        
+        if not in_string:
+            if c == open_char:
+                depth += 1
+            elif c == close_char:
+                depth -= 1
+                if depth == 0:
+                    return text[start_pos:i+1]
+    
+    # If we reach here, the JSON is incomplete, return what we have
+    return text[start_pos:]
 
 def format_original_prompt(text, top_k_results, group_type='ur_pr'):
     if group_type == GroupType.UR_PR.value:
@@ -135,11 +177,35 @@ def results_with_gpt(query_text, results, top_k, group_type='ur_pr') -> Tuple[Li
 
         response_message = chat_completion.choices[0].message.content.strip()
 
-        json_match = re.search(r'(\{.*\}|\[.*\])', response_message, re.DOTALL)
-        if json_match:
-            json_text = json_match.group()
+        final_output_match = re.search(r'Final output:\s*', response_message, re.IGNORECASE)
+        if final_output_match:
+            # Extract text after "Final output:"
+            remaining_text = response_message[final_output_match.end():].strip()
+            # Find the first JSON object/array in the remaining text
+            json_start = None
+            for i, char in enumerate(remaining_text):
+                if char in ['{', '[']:
+                    json_start = i
+                    break
+            if json_start is not None:
+                # Extract JSON by finding matching braces/brackets
+                json_text = _extract_json_from_position(remaining_text, json_start)
+            else:
+                json_text = remaining_text
         else:
-            json_text = response_message
+            # Find the first occurrence of { or [
+            json_start = None
+            for i, char in enumerate(response_message):
+                if char in ['{', '[']:
+                    json_start = i
+                    break
+            
+            if json_start is not None:
+                # Extract JSON by finding matching braces/brackets
+                json_text = _extract_json_from_position(response_message, json_start)
+            else:
+                json_text = response_message
+        
         try:
             response_data = json.loads(json_text)
             # Handle both list format [] and dict format {'links': [...]}
@@ -503,4 +569,3 @@ if __name__ == "__main__":
         json.dump(summary, f, ensure_ascii=False, indent=2)
 
     print(f"Saved processing summary to {summary_path}")
-    

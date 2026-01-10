@@ -27,7 +27,7 @@ FONT_SIZE = 30
 LEGEND_FONT_SIZE = max(8, FONT_SIZE - 3)
 
 LINE_STYLE_MAIN = (2.5, 1.0)
-LINE_STYLE_INDIVIDUAL = (0.5, 0.3)
+LINE_STYLE_INDIVIDUAL = (0.5, 0.5)
 LINE_STYLE_THEIL_SEN = (2.0, 0.8)
 
 CONTENT_TYPE_LINE_COLORS: Dict[ContentType, str] = {
@@ -48,6 +48,16 @@ CONTENT_TYPE_ORDER = {
 CONTENT_TYPE_LABELS: Dict[ContentType, str] = {
     ContentType.UR: "URs",
     ContentType.PR: "PRs",
+}
+
+CONTENT_TYPE_LABELS_WITH_AVERAGE: Dict[ContentType, str] = {
+    ContentType.UR: "URs (App Average)",
+    ContentType.PR: "PRs (App Average)",
+}
+
+CONTENT_TYPE_LABELS_WITH_EACH_APP: Dict[ContentType, str] = {
+    ContentType.UR: "URs (App)",
+    ContentType.PR: "PRs (App)",
 }
 
 CATEGORY_TYPE_LABELS: Dict[CategoryType, str] = {
@@ -420,7 +430,6 @@ class BaseLinkedPlotter(ABC):
             self._plot_content_type_with_stats(ax_ur, ur_entry, ContentType.UR, linewidth=LINE_STYLE_INDIVIDUAL[0], alpha=LINE_STYLE_INDIVIDUAL[1], only_line=True)
             self._plot_content_type_with_stats(ax_pr, pr_entry, ContentType.PR, linewidth=LINE_STYLE_INDIVIDUAL[0], alpha=LINE_STYLE_INDIVIDUAL[1], only_line=True)
 
-
         ur_elapsed_month_groups = self.statistics_analyzer.prepare_compared_value_groups(combined_metric_df[ContentType.UR], "metric", compared_col="elapsed_years", min_group_size=1)
         pr_elapsed_month_groups = self.statistics_analyzer.prepare_compared_value_groups(combined_metric_df[ContentType.PR], "metric", compared_col="elapsed_years", min_group_size=1)
         self._plot_content_type_with_stats(ax_ur, ur_elapsed_month_groups, ContentType.UR, view="per-repo")
@@ -437,7 +446,7 @@ class BaseLinkedPlotter(ABC):
     ) -> None:
         """Create category comparison plot with UR (top) and PR (bottom), each showing Hedonic and Utilitarian."""
         output_file = self.png_path / f"all_repos_category_ur_pr_{self.metric_name}.png"
-        fig, axes = plt.subplots(2, 1, figsize=(16, 12))
+        fig, axes = plt.subplots(2, 1, figsize=(24, 12))
         ax_ur, ax_pr = axes[0], axes[1]
         ur_category_entries = category_entries_by_content.get(ContentType.UR)
         pr_category_entries = category_entries_by_content.get(ContentType.PR)
@@ -454,6 +463,56 @@ class BaseLinkedPlotter(ABC):
         fig.savefig(output_file, dpi=300, bbox_inches="tight")
         plt.close(fig)
         print(f"Saved category comparison plot: {output_file}")
+    
+    def create_ur_pr_plot_with_category_individual(
+        self, 
+        repo_entries: Dict[int, Dict[ContentType, Dict[CategoryType, Dict[str, Any]]]], 
+        category_entries_by_content: Dict[ContentType, Dict[CategoryType, Dict[str, Any]]],
+    ) -> None:
+        """Create UR/PR comparison plot with individual repositories colored by category (light) and category averages (bold)."""
+        output_file = self.png_path / f"all_repos_category_ur_pr_with_individual_{self.metric_name}.png"
+        fig, axes = plt.subplots(2, 1, figsize=(24, 12))
+        ax_ur, ax_pr = axes[0], axes[1]
+        ur_entries, pr_entries = {
+            "x_values": [],
+            "metric_values": [],
+        }, {
+            "x_values": [],
+            "metric_values": [],
+        }
+
+        for _, entry in repo_entries.items():
+            ur_category_entry = entry.get(ContentType.UR)
+            pr_category_entry = entry.get(ContentType.PR)
+
+            if not ur_category_entry or not pr_category_entry:
+                continue
+
+            category_type = next(iter(ur_category_entry.keys()))
+            
+            ur_entry_data = ur_category_entry.get(category_type)
+            pr_entry_data = pr_category_entry.get(category_type)
+            
+            if ur_entry_data is None or pr_entry_data is None:
+                continue
+
+            ur_entries["x_values"].extend(ur_entry_data["x_values"])
+            ur_entries["metric_values"].extend(ur_entry_data["metric_values"])
+            pr_entries["x_values"].extend(pr_entry_data["x_values"])
+            pr_entries["metric_values"].extend(pr_entry_data["metric_values"])
+
+            self._plot_categories_with_stats(ax_ur, ur_category_entry, category_type, linewidth=LINE_STYLE_INDIVIDUAL[0], alpha=LINE_STYLE_INDIVIDUAL[1], only_line=True)
+            self._plot_categories_with_stats(ax_pr, pr_category_entry, category_type, linewidth=LINE_STYLE_INDIVIDUAL[0], alpha=LINE_STYLE_INDIVIDUAL[1], only_line=True)
+
+        ur_category_entries = category_entries_by_content.get(ContentType.UR)
+        pr_category_entries = category_entries_by_content.get(ContentType.PR)
+        self._plot_categories_with_stats(ax_ur, ur_category_entries, ContentType.UR, view="per-repo")
+        self._plot_categories_with_stats(ax_pr, pr_category_entries, ContentType.PR, view="per-repo")
+
+        self._configure_dual_plot_axes(fig, [ax_ur, ax_pr], [ur_entries, pr_entries])
+        plt.tight_layout()
+        fig.savefig(output_file, dpi=300, bbox_inches="tight")
+        plt.close(fig)
     
     def _configure_dual_plot_axes(
         self,
@@ -577,14 +636,19 @@ class BaseLinkedPlotter(ABC):
                 plot_x_vals = [values for values in entry.keys()]
                 plot_y_vals = [values.mean() for values in entry.values()]
                 x_vals, y_vals = self.statistics_analyzer._format_grouped_values(entry)
+                label = CONTENT_TYPE_LABELS_WITH_AVERAGE.get(content_type)
             else:
                 x_vals = np.asarray(data.get("x_values", []))
                 y_vals = np.asarray(data.get("metric_values", []))
                 plot_x_vals, plot_y_vals = x_vals, y_vals
+                label = CONTENT_TYPE_LABELS.get(content_type)
+            
+            if view == "per-repo":
+                ax.plot(plot_x_vals, plot_y_vals, color=CONTENT_TYPE_LINE_COLORS.get(content_type), linestyle="-", linewidth=LINE_STYLE_INDIVIDUAL[0], alpha=LINE_STYLE_INDIVIDUAL[1], label=CONTENT_TYPE_LABELS_WITH_EACH_APP.get(content_type))
 
             ax.plot(
                 plot_x_vals, plot_y_vals,
-                label=CONTENT_TYPE_LABELS.get(content_type) if not only_line else None,
+                label=label if not only_line else None,
                 color=CONTENT_TYPE_LINE_COLORS.get(content_type),
                 linestyle="-",
                 linewidth=linewidth,
@@ -619,10 +683,7 @@ class BaseLinkedPlotter(ABC):
         x_line = np.array([x_arr.min(), x_arr.max()], dtype=float)
         y_line = intercept + slope * x_line
         ax.plot(x_line, y_line, color=CONTENT_TYPE_LINE_COLORS.get(content_type), linestyle="--", linewidth=LINE_STYLE_THEIL_SEN[0], alpha=LINE_STYLE_THEIL_SEN[1], label="Theil-Sen")
-
-        if view == "per-repo":
-            ax.plot(x_line, y_line, color=CONTENT_TYPE_LINE_COLORS.get(content_type), linestyle="-", linewidth=LINE_STYLE_INDIVIDUAL[0], alpha=LINE_STYLE_INDIVIDUAL[1], label="App")
-        
+ 
         legend_loc = LEGEND_LOCATIONS["labels"]
         ax.legend(fontsize=LEGEND_FONT_SIZE, loc=legend_loc)
     
@@ -631,6 +692,10 @@ class BaseLinkedPlotter(ABC):
         ax: plt.Axes,
         category_entries: Dict[CategoryType, Dict[str, Any]],
         content_type: ContentType,
+        linewidth: float = LINE_STYLE_MAIN[0],
+        alpha: float = LINE_STYLE_MAIN[1],
+        only_line: bool = False,
+        view: str = "all-repos",
     ) -> None:
         """Plot multiple categories (Hedonic and Utilitarian) on the same axes with statistics."""
         # Plot lines for both categories
@@ -641,31 +706,31 @@ class BaseLinkedPlotter(ABC):
             x_vals = np.asarray(entry.get("x_values", []))
             y_vals = np.asarray(entry.get("metric_values", []))
 
+            if view == "per-repo":
+                label = f"{CATEGORY_TYPE_LABELS.get(category)} {CONTENT_TYPE_LABELS_WITH_EACH_APP.get(content_type)}"
+                ax.plot(x_vals, y_vals, color=CATEGORY_TYPE_LINE_COLORS.get(category), linestyle="-", linewidth=LINE_STYLE_INDIVIDUAL[0], alpha=LINE_STYLE_INDIVIDUAL[1], label=label)
+
             ax.plot(
                 x_vals, y_vals,
-                label= f"{CONTENT_TYPE_LABELS.get(content_type)} {CATEGORY_TYPE_LABELS.get(category)}",
+                label= f"{CATEGORY_TYPE_LABELS.get(category)} {CONTENT_TYPE_LABELS_WITH_AVERAGE.get(content_type)}" if not only_line else None,
                 color=CATEGORY_TYPE_LINE_COLORS.get(category),
                 linestyle="-",
-                linewidth=LINE_STYLE_MAIN[0],
+                linewidth=linewidth,
+                alpha=alpha,
             )
+        
+            if not only_line:
+                x_values = np.asarray(entry.get("x_values", []))
+                y_values = np.asarray(entry.get("metric_values", []))
+                mask = np.isfinite(x_values) & np.isfinite(y_values)
+                x_arr, y_arr = x_values[mask], y_values[mask]
 
-        # Add statistics for each category
-        for category, entry in category_entries.items():
-            if not entry:
-                continue
+                slope, intercept, _, _ = scipy_stats.theilslopes(y_arr, x_arr, 0.95)
                 
-            x_values = np.asarray(entry.get("x_values", []))
-            y_values = np.asarray(entry.get("metric_values", []))
-            mask = np.isfinite(x_values) & np.isfinite(y_values)
-            x_arr, y_arr = x_values[mask], y_values[mask]
-
-            slope, intercept, _, _ = scipy_stats.theilslopes(y_arr, x_arr, 0.95)
-            
-            x_line = np.array([x_arr.min(), x_arr.max()], dtype=float)
-            y_line = intercept + slope * x_line
-            ax.plot(x_line, y_line, color=CATEGORY_TYPE_LINE_COLORS.get(category), 
-                    linestyle="--", linewidth=LINE_STYLE_THEIL_SEN[0], alpha=LINE_STYLE_THEIL_SEN[1], label=f"{CATEGORY_TYPE_LABELS.get(category)} Theil-Sen")
+                x_line = np.array([x_arr.min(), x_arr.max()], dtype=float)
+                y_line = intercept + slope * x_line
+                ax.plot(x_line, y_line, color=CATEGORY_TYPE_LINE_COLORS.get(category), 
+                        linestyle="--", linewidth=LINE_STYLE_THEIL_SEN[0], alpha=LINE_STYLE_THEIL_SEN[1], label=f"{CATEGORY_TYPE_LABELS.get(category)} Theil-Sen")
         
         legend_loc = LEGEND_LOCATIONS["labels"]
-        ax.legend(fontsize=LEGEND_FONT_SIZE, loc=legend_loc)
-
+        ax.legend(bbox_to_anchor=(1.5, 1), fontsize=LEGEND_FONT_SIZE, loc=legend_loc)

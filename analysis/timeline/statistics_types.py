@@ -79,4 +79,3 @@ class SummaryRow:
     month_comparison_result: Optional[GroupTestResult]
     app_comparison_result: Optional[GroupTestResult]
     category_comparison_result: Optional[GroupTestResult]
-

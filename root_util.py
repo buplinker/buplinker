@@ -8,10 +8,10 @@ from typing import Optional, Tuple
 from enum import Enum
 from datetime import datetime, timedelta
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../")))
-
 import data_fetch.database.get as data
 from data_fetch.database.tables import Repository
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../")))
 import project_config as config
 
 load_dotenv()

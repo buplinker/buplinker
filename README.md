@@ -8,10 +8,13 @@
 ```shell
 curl -O https://dl.fbaipublicfiles.com/fasttext/supervised-models/lid.176.bin
 pip install -r requirements.txt
+tar -xJf analysis/timeline/results.tar.xz
+tar -xJf buplinker/code/output.tar.xz
 ```
 Set your github auth token into `project_config.py` and cerate `.env` file and set your oprnai api key into there, like `OPENAI_API_KEY=hoge`.
 
-# Set input data for BUPLinker
+# Run BUPLinker
+## Set input data for BUPLinker
 If you don't have mysql server or if you want to run the BUPLinker,
 place the following data into `buplinker/dataset`, naming `input_pairs`:
 [https://drive.google.com/drive/folders/1eqfou_mbbqI0TqtCD8mk0l4BYTjavuxa?usp=sharing](https://drive.google.com/drive/folders/1DtnC7vLlhqXIuKDXdRs7dIGAEYxKgfNW?usp=sharing)
