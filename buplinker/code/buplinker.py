@@ -2,7 +2,7 @@ import os
 import sys
 from util import clean_text, results_to_df_llm, recall, precision, F1_score, get_group_key
 
-# プロジェクトルートをパスに追加（他のインポートの前に実行）
+# Add project root to path (execute before other imports)
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
 
 import argparse
@@ -27,12 +27,6 @@ import project_config as config
 from root_util import GroupType
 
 load_dotenv()
-
-class PromptType(Enum):
-    """プロンプトタイプの定義"""
-    ORIGINAL = "original"
-    RERANK = "rerank"
-    IDENTIFY = "identify"
 
 
 def normalize_group_id(value):
@@ -234,12 +228,12 @@ def results_with_gpt(query_text, results, top_k, group_type='ur_pr') -> Tuple[Li
             id_to_data = {ur_id: (pr_id, sim_score, create_date, pull_request_date, latest_release_date, user_review, pull_request, url, author, target) for ur_id, pr_id, sim_score, create_date, pull_request_date, latest_release_date, user_review, pull_request, url, author, target in top_k_results}
 
         reranked_top_k_results = []
-        processed_ids = set()  # GPTから返ってきたIDを追跡
+        processed_ids = set()  # Track IDs returned from GPT
         invalid_ids = []
         
         for idx, id_val in enumerate(reranked_ids, start=1):
             if id_val in id_to_data:
-                processed_ids.add(id_val)  # 処理済みIDを記録
+                processed_ids.add(id_val)  # Record processed ID
                 if group_type == GroupType.UR_PR.value:
                     ur_id, sim_score, create_date, pull_request_date, latest_release_date, user_review, pull_request, url, author, target = id_to_data[id_val]
                     pr_id = id_val
@@ -297,8 +291,8 @@ if __name__ == "__main__":
 
     print("Starting processing...")
 
-    # CSVを読み込み（改行を含むフィールドに対応）
-    # pythonエンジンは柔軟性が高く、改行を含むフィールドを正しく処理できる
+    # Read CSV (supports fields containing line breaks)
+    # Python engine is flexible and can correctly handle fields containing line breaks
     df = pd.read_csv(
         args.csv_file, 
         engine='python',

@@ -1,7 +1,7 @@
 """
-Ground Truth用データ抽出スクリプト
+Ground Truth data extraction script
 
-各期間からランダムに2つのURを抽出し、それぞれに対して1年以内のPRとのペアを作成する。
+Extract 2 URs randomly from each period and create pairs with PRs within 1 year for each.
 """
 
 import logging
@@ -62,45 +62,45 @@ def extract_data(repo, limited_mode=False):
    
 
 def compare_versions(ur_version, release_version):
-    """バージョン比較を行う（柔軟な形式に対応）"""
+    """Compare versions (supports flexible formats)"""
     try:
-        # バージョン文字列の前処理
+        # Preprocess version strings
         ur_clean = str(ur_version).strip()
         release_clean = str(release_version).strip()
         
-        # プレフィックスを削除（v, oc-android-など）
+        # Remove prefixes (v, oc-android-, etc.)
         ur_clean = re.sub(r'^[a-zA-Z-]+-?', '', ur_clean)
         release_clean = re.sub(r'^[a-zA-Z-]+-?', '', release_clean)
         
-        # バージョン文字列を分割（.で分割）
+        # Split version strings (split by .)
         ur_parts = ur_clean.split('.')
         release_parts = release_clean.split('.')
         
-        # 各パートを数値に変換（失敗した場合は0）
+        # Convert each part to number (0 if failed)
         def safe_int(part):
             try:
-                # 英数字が混在する場合は数字部分のみ抽出
+                # Extract only numeric part if alphanumeric mixed
                 numbers = re.findall(r'\d+', str(part))
                 return int(numbers[0]) if numbers else 0
             except:
                 return 0
         
-        # バージョン番号を抽出
+        # Extract version numbers
         ur_nums = [safe_int(part) for part in ur_parts]
         release_nums = [safe_int(part) for part in release_parts]
         
-        # パディングして同じ長さにする
+        # Pad to same length
         max_len = max(len(ur_nums), len(release_nums))
         ur_nums.extend([0] * (max_len - len(ur_nums)))
         release_nums.extend([0] * (max_len - len(release_nums)))
         
-        # バージョン比較
+        # Compare versions
         for ur_num, release_num in zip(ur_nums, release_nums):
             if ur_num > release_num:
                 return True
             elif ur_num < release_num:
                 return False
-        return True  # 完全に同じバージョン
+        return True  # Completely same version
         
     except Exception as e:
         print(f"Version comparison failed: {ur_version} vs {release_version} - {e}")
@@ -108,40 +108,40 @@ def compare_versions(ur_version, release_version):
 
 
 def is_valid_pr_ur_link_vectorized(pr_merged_at, ur_created_at_series, ur_review_version_series, df_release_sorted):
-    """PR-URのリンクが有効かどうかをベクトル化で判定する
+    """Determine if PR-UR link is valid using vectorization
     
     Args:
-        pr_merged_at: PRのマージ日
-        ur_created_at_series: URの作成日シリーズ
-        ur_review_version_series: URのレビューバージョンシリーズ
-        df_release: リリースデータフレーム
+        pr_merged_at: PR merge date
+        ur_created_at_series: UR creation date series
+        ur_review_version_series: UR review version series
+        df_release: Release dataframe
     
     Returns:
         tuple: (valid_mask: pd.Series, latest_release_date: pd.Timestamp or None)
     """
     try:
-        # df_release_sorted は事前ソート・型変換済みを期待        
-        # PRのマージ日以降のリリースを取得
+        # df_release_sorted is expected to be pre-sorted and type-converted        
+        # Get releases after PR merge date
         releases_after_merge = df_release_sorted[df_release_sorted['released_at'] >= pr_merged_at]
         
         if releases_after_merge.empty:
             return pd.Series([False] * len(ur_created_at_series), index=ur_created_at_series.index), None
         
-        # 最も直近のリリースを取得
+        # Get most recent release
         latest_release = releases_after_merge.iloc[0]
         latest_release_date = latest_release['released_at']
         latest_release_version = latest_release['version']
         
-        # 条件1: URの作成日が最も直近のリリース日以降（ベクトル化）
+        # Condition 1: UR creation date is after most recent release date (vectorized)
         time_condition = (
             (ur_created_at_series >= latest_release_date) & 
             (ur_created_at_series <= latest_release_date + pd.Timedelta(days=THRESHOLD_DAYS))
         )
         
-        # 条件2: バージョン比較（ベクトル化）
+        # Condition 2: Version comparison (vectorized)
         version_condition = _compare_versions_vectorized(ur_review_version_series, latest_release_version)
         
-        # 両方の条件を満たすURのマスク
+        # Mask for URs satisfying both conditions
         valid_mask = time_condition & version_condition
         
         return valid_mask, latest_release_date
@@ -152,7 +152,7 @@ def is_valid_pr_ur_link_vectorized(pr_merged_at, ur_created_at_series, ur_review
 
 
 def _compare_versions_vectorized(ur_versions, release_version):
-    """バージョン比較をベクトル化で実行"""
+    """Execute version comparison using vectorization"""
     
     def safe_int(part):
         try:
@@ -163,39 +163,39 @@ def _compare_versions_vectorized(ur_versions, release_version):
     
     def compare_single_version(ur_version):
         try:
-            # バージョン文字列の前処理
+            # Preprocess version strings
             ur_clean = str(ur_version).strip()
             release_clean = str(release_version).strip()
             
-            # プレフィックスを削除
+            # Remove prefixes
             ur_clean = re.sub(r'^[a-zA-Z-]+-?', '', ur_clean)
             release_clean = re.sub(r'^[a-zA-Z-]+-?', '', release_clean)
             
-            # バージョン文字列を分割
+            # Split version strings
             ur_parts = ur_clean.split('.')
             release_parts = release_clean.split('.')
             
-            # 各パートを数値に変換
+            # Convert each part to number
             ur_nums = [safe_int(part) for part in ur_parts]
             release_nums = [safe_int(part) for part in release_parts]
             
-            # パディングして同じ長さにする
+            # Pad to same length
             max_len = max(len(ur_nums), len(release_nums))
             ur_nums.extend([0] * (max_len - len(ur_nums)))
             release_nums.extend([0] * (max_len - len(release_nums)))
             
-            # バージョン比較
+            # Compare versions
             for ur_num, release_num in zip(ur_nums, release_nums):
                 if ur_num > release_num:
                     return True
                 elif ur_num < release_num:
                     return False
-            return True  # 完全に同じバージョン
+            return True  # Completely same version
             
         except Exception:
             return False
     
-    # ベクトル化されたバージョン比較
+    # Vectorized version comparison
     return ur_versions.apply(compare_single_version)
 
 
@@ -256,28 +256,28 @@ def extract_random_data(df: pd.DataFrame, start_date: pd.Timestamp, end_date: pd
         (df['created_at'] <= end_date)
     ]
     
-    # データが不足している場合は警告
+    # Warn if insufficient data
     if len(period_data) < n:
         logger.warning(f"  Warning: Only {len(period_data)} data available in period({start_date}, {end_date}), requested {n}")
         return period_data
     
-    # ランダムにn個抽出
+    # Randomly extract n items
     return period_data.sample(n=n, random_state=42)
 
 
 def create_pairs(base_df: pd.DataFrame, target_df: pd.DataFrame, group_type: GroupType, df_release: pd.DataFrame=None) -> pd.DataFrame:
     output_data = []
     
-    # 日付列を型変換
+    # Type convert date columns
     base_df['created_at'] = pd.to_datetime(base_df['created_at'])
     target_df['created_at'] = pd.to_datetime(target_df['created_at'])
 
     if group_type == GroupType.UR_PR:
-        # 高速化: PR側を作成日時でソートし、二分探索で範囲抽出
+        # Optimization: Sort PR side by creation date and extract range using binary search
         pr_df_sorted = target_df.sort_values('created_at').reset_index(drop=True)
         pr_times = pr_df_sorted['created_at'].to_numpy(dtype='datetime64[ns]')
 
-        # ループは itertuples で高速化
+        # Optimize loop with itertuples
         for base_row in tqdm.tqdm(base_df.itertuples(index=False), total=len(base_df)):
             base_date = getattr(base_row, 'created_at')
             end_date = base_date + pd.Timedelta(days=THRESHOLD_DAYS)
@@ -308,12 +308,12 @@ def create_pairs(base_df: pd.DataFrame, target_df: pd.DataFrame, group_type: Gro
                 output_data.append(pair_data)
     
     else:
-        # PR-URの場合はベクトル化された処理を使用
-        # 日付を事前に変換
+        # Use vectorized processing for PR-UR case
+        # Pre-convert dates
         target_created_at_series = target_df['created_at']
         target_review_version_series = target_df['review_version']
 
-        # リリースは一度だけソート&型変換
+        # Sort and type-convert releases only once
         df_release_sorted = df_release.copy()
         df_release_sorted['released_at'] = pd.to_datetime(df_release_sorted['released_at'])
         df_release_sorted = df_release_sorted.sort_values('released_at')
@@ -321,7 +321,7 @@ def create_pairs(base_df: pd.DataFrame, target_df: pd.DataFrame, group_type: Gro
         for base_row in tqdm.tqdm(base_df.itertuples(index=False), total=len(base_df)):
             pr_merged_at = pd.to_datetime(getattr(base_row, 'merged_at'))
             
-            # ベクトル化された関数を使用してPR-URリンクをチェック
+            # Check PR-UR links using vectorized function
             valid_mask, latest_release_date = is_valid_pr_ur_link_vectorized(
                 pr_merged_at,
                 target_created_at_series,
@@ -329,7 +329,7 @@ def create_pairs(base_df: pd.DataFrame, target_df: pd.DataFrame, group_type: Gro
                 df_release_sorted,
             )
             
-            # 条件を満たすURを取得
+            # Get URs satisfying conditions
             valid_targets = target_df[valid_mask].copy()
             if latest_release_date is not None:
                 valid_targets['latest_release_date'] = latest_release_date

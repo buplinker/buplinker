@@ -13,7 +13,7 @@ tar -xJf buplinker/code/output.tar.xz
 ```
 Set your github auth token into `project_config.py` and cerate `.env` file and set your oprnai api key into there, like `OPENAI_API_KEY=hoge`.
 
-# Run BUPLinker
+# How to Run BUPLinker
 ## Set input data for BUPLinker
 If you don't have mysql server or if you want to run the BUPLinker,
 place the following data into `buplinker/dataset`, naming `input_pairs`:

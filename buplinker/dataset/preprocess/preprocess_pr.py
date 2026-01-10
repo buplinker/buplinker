@@ -7,7 +7,7 @@ import time
 from sqlalchemy.types import DateTime
 from tqdm import tqdm
 
-# CUDAメモリ管理のためのtorchインポート（オプショナル）
+# Optional torch import for CUDA memory management
 try:
     import torch
     TORCH_AVAILABLE = True
@@ -25,19 +25,19 @@ from data_fetch.database.tables import Repository
 from data_fetch.database.set import reset_database_connection
 from root_util import ContentType
 
-# グローバルキャッシュ：repository_id -> {pr_id -> 前処理済みdescription}
+# Global cache: repository_id -> {pr_id -> preprocessed description}
 _preprocessing_cache = {}
 
-# テンプレート/エクストラクタのキャッシュ（repository_idごとに管理）
+# Template/extractor cache (managed per repository_id)
 _template_context_cache = {}
 
-# TemplateExtractorのキャッシュ（repository_idごとに管理、メモリ効率化のため）
+# TemplateExtractor cache (managed per repository_id for memory efficiency)
 _template_extractor_cache = {}
 
-# 永続化キャッシュの最終保存時刻（頻度制限のため）
+# Last save time of persistent cache (for rate limiting)
 _last_persist_time = {}
 
-# キャッシュディレクトリの設定
+# Cache directory configuration
 CACHE_DIR = os.path.join(os.path.dirname(__file__), 'cache')
 os.makedirs(CACHE_DIR, exist_ok=True)
 
@@ -48,11 +48,11 @@ def get_log_func(logger=None, error=False):
         return (lambda msg: print(msg, file=sys.stderr)) if error else print
 
 def _get_cache_path(repo: Repository):
-    """キャッシュファイルのパスを生成"""
+    """Generate cache file path"""
     return os.path.join(CACHE_DIR, f"{repo.id}_{repo.owner}.{repo.name}.pkl")
 
 def _load_description_without_template_cache(repo: Repository, logger=None):
-    """repositoryごとのdescription without templateキャッシュを読み込み"""
+    """Load description without template cache per repository"""
     cache_path = _get_cache_path(repo)
     if os.path.exists(cache_path):
         try:
@@ -63,10 +63,10 @@ def _load_description_without_template_cache(repo: Repository, logger=None):
     return None
 
 def _save_description_without_template_cache(repository_id: int, ctx: dict, logger=None, force=False):
-    """repositoryごとのdescription without templateキャッシュを保存"""
+    """Save description without template cache per repository"""
     global _last_persist_time
     
-    # 頻度制限: 最後の保存から5秒以上経過していない場合はスキップ（force=Trueの場合は除く）
+    # Rate limiting: skip if less than 600 seconds since last save (except when force=True)
     if not force:
         last_time = _last_persist_time.get(repository_id, 0)
         current_time = time.time()
@@ -86,10 +86,10 @@ def _save_description_without_template_cache(repository_id: int, ctx: dict, logg
         get_log_func(logger=logger, error=True)(f"Error saving description without template cache for repository {repository_id}: {e}")
 
 def clear_description_without_template_cache(repo: Repository, logger=None):
-    """description without templateキャッシュをクリア（repo指定時はそのrepositoryのみ）"""
+    """Clear description without template cache (only for specified repository if repo is provided)"""
     global _template_context_cache
     if repo is not None:
-        # 特定のrepositoryのキャッシュをクリア
+        # Clear cache for specific repository
         cache_path = _get_cache_path(repo)
         if os.path.exists(cache_path):
             os.remove(cache_path)
@@ -98,13 +98,13 @@ def clear_description_without_template_cache(repo: Repository, logger=None):
             del _template_context_cache[repo.id]
 
 def clear_preprocessing_cache(logger=None):
-    """メモリキャッシュを手動でクリア"""
+    """Manually clear memory cache"""
     global _preprocessing_cache
     _preprocessing_cache.clear()
     get_log_func(logger=logger)(f"Preprocessing cache cleared")
 
 def clear_preprocessing_cache_for_repo(repository_id: int, logger=None):
-    """特定のrepositoryのメモリキャッシュをクリア"""
+    """Clear memory cache for specific repository"""
     global _preprocessing_cache
     if repository_id in _preprocessing_cache:
         del _preprocessing_cache[repository_id]
@@ -119,18 +119,18 @@ def preprocess_pr_data(df: pd.DataFrame, logger=None) -> pd.DataFrame:
         
     repository_id = int(preprocessed_df.iloc[0]['repository_id'])
     
-    # 永続化されたキャッシュを読み込み
+    # Load persistent cache
     persistent_cache = _get_template_context(repository_id).get("pr_description_without_template", {})
     
-    # repository_idごとのメモリキャッシュを取得
+    # Get memory cache per repository_id
     if repository_id not in _preprocessing_cache:
         _preprocessing_cache[repository_id] = {}
     memory_cache = _preprocessing_cache[repository_id]
     
-    # 重複を除いたuniqueなPR IDのリストを作成（順序を保持）
+    # Create list of unique PR IDs (preserving order)
     unique_pr_ids = preprocessed_df['pr_id'].astype(str).unique()
     
-    # uniqueなPRごとにデータをマッピング
+    # Map data per unique PR
     pr_id_to_row_idx = {}
     pr_id_to_data = {}
     for idx, row in preprocessed_df.iterrows():
@@ -144,20 +144,20 @@ def preprocess_pr_data(df: pd.DataFrame, logger=None) -> pd.DataFrame:
                 'repository_id': str(row['repository_id']),
             }
     
-    # キャッシュチェックを実行
+    # Perform cache check
     cache_results = {}
     cache_miss_pr_ids = []
     cache_updated = False
     
     for pr_id in unique_pr_ids:
         if pr_id in memory_cache:
-            # メモリキャッシュから取得し、永続キャッシュにも保存
+            # Get from memory cache and also save to persistent cache
             enhanced_desc = memory_cache[pr_id]
             if pr_id not in persistent_cache:
                 persistent_cache[pr_id] = enhanced_desc
             cache_results[pr_id] = enhanced_desc
         elif pr_id in persistent_cache:
-            # 永続キャッシュから取得し、メモリキャッシュにも保存
+            # Get from persistent cache and also save to memory cache
             enhanced_desc = persistent_cache[pr_id]
             memory_cache[pr_id] = enhanced_desc
             cache_results[pr_id] = enhanced_desc
@@ -165,14 +165,14 @@ def preprocess_pr_data(df: pd.DataFrame, logger=None) -> pd.DataFrame:
             cache_results[pr_id] = None
             cache_miss_pr_ids.append(pr_id)
     
-    # キャッシュの使用状況を表示
+    # Display cache usage status
     get_log_func(logger)(f"  Cache status: {len(cache_miss_pr_ids)}/{len(unique_pr_ids)} unique PRs need processing")
     
-    # キャッシュミスしたもののみ処理
+    # Process only cache misses
     if cache_miss_pr_ids:
         get_log_func(logger)(f"  Processing {len(cache_miss_pr_ids)} PRs not in cache...")
         
-        # バッチ処理でテンプレート抽出
+        # Extract templates in batch
         batch_data = [pr_id_to_data[pr_id] for pr_id in cache_miss_pr_ids]
         enhanced_descriptions_batch = _process_descriptions_batch(
             [d['description'] for d in batch_data],
@@ -183,40 +183,40 @@ def preprocess_pr_data(df: pd.DataFrame, logger=None) -> pd.DataFrame:
             logger=logger,
         )
         
-        # 結果を両方のキャッシュに保存
+        # Save results to both caches
         for pr_id, enhanced_desc in zip(cache_miss_pr_ids, enhanced_descriptions_batch):
             memory_cache[pr_id] = enhanced_desc
             persistent_cache[pr_id] = enhanced_desc
             cache_results[pr_id] = enhanced_desc
             cache_updated = True
         
-        # 永続化されたキャッシュを保存（構造を保持したcontextとして保存）
+        # Save persistent cache (save as context maintaining structure)
         if cache_updated:
             full_context = _get_template_context(repository_id)
             _save_description_without_template_cache(repository_id, full_context, logger=logger, force=True)
             get_log_func(logger)(f"  Saved {len(cache_miss_pr_ids)} new descriptions to persistent cache")
     
-    # 全PRに処理済みdescriptionを割り当て（重複がある場合も同じPR IDなら同じdescription）
+    # Assign processed description to all PRs (same PR ID gets same description even if duplicated)
     preprocessed_df['description'] = preprocessed_df['pr_id'].astype(str).map(cache_results)
 
-    # メモリキャッシュから永続キャッシュへの同期（確実性のため）
+    # Sync from memory cache to persistent cache (for reliability)
     if cache_updated:
         full_context = _get_template_context(repository_id)
         _save_description_without_template_cache(repository_id, full_context, logger=logger, force=True)
         get_log_func(logger)(f"  Final sync: Updated persistent cache with {len(persistent_cache)} descriptions")
 
-    # メモリキャッシュは保持（同じプロセス内での再利用のため）
-    # 必要に応じて手動でクリアする場合は clear_preprocessing_cache() を使用
+    # Keep memory cache (for reuse within same process)
+    # Use clear_preprocessing_cache() if manual clearing is needed
     return preprocessed_df
 
 
 def _process_descriptions_batch(descriptions, description_htmls, pull_request_dates, repository_ids, pr_ids, logger=None):
-    """バッチ処理でdescriptionを前処理"""
+    """Preprocess descriptions in batch"""
     enhanced_descriptions = []
     
     for i in tqdm(range(len(descriptions)), desc="Processing descriptions batch"):
         try:
-            # 型変換を確実に行う
+            # Ensure type conversion
             pr_id = pr_ids[i]
             repository_id = repository_ids[i]
             
@@ -240,23 +240,23 @@ def _process_descriptions_batch(descriptions, description_htmls, pull_request_da
                 logger=logger,
             )
             
-            # 最終的なクリーンアップ（念のため再度適用）
+            # Final cleanup (apply again as a precaution)
             enhanced_desc = _clean_description_text(enhanced_desc)
             
             enhanced_descriptions.append(enhanced_desc)
             
         except Exception as e:
             error_str = str(e)
-            # 例外メッセージを安全にログ出力（loggerメソッドにfile引数を渡さない）
+            # Safely log exception message (don't pass file argument to logger method)
             try:
                 log_func = get_log_func(logger=logger, error=True)
                 log_func(f"Error processing PR {pr_id}: {error_str}")
             except Exception as log_error:
-                # logger呼び出しでもエラーが発生した場合は、直接printを使用
+                # Use print directly if logger call also fails
                 print(f"Error processing PR {pr_id}: {error_str}", file=sys.stderr)
                 print(f"Logger error: {log_error}", file=sys.stderr)
             
-            # CUDAメモリ不足エラーの場合はメモリをクリアしてから終了
+            # Clear memory and exit if CUDA out of memory error
             if "CUDA" in error_str and "out of memory" in error_str:
                 if TORCH_AVAILABLE and torch.cuda.is_available():
                     try:
@@ -288,24 +288,24 @@ def filter_bot_prs(df_pull_request: pd.DataFrame, logger=None) -> pd.DataFrame:
         bot_df = pd.read_csv(bot_csv_path)
         bot_df = bot_df[bot_df['type'] == 'Bot']
         
-        # ボットアカウントのセットを作成（高速検索のため）
+        # Create set of bot accounts (for fast lookup)
         bot_accounts = set(bot_df['account'].tolist())
         
-        # ベクトル化されたボット判定
+        # Vectorized bot detection
         def is_bot_author_vectorized(author):
             if pd.isna(author) or author is None:
                 return False
             
             author_str = str(author).lower()
             
-            # 1. authorの末尾に'bot'が含まれる場合
+            # 1. If author ends with 'bot'
             if author_str.endswith('bot') or author_str.endswith('[bot]'):
                 return True
             
-            # 2. groundtruthbots.csv内でaccountとprojectが一致する場合
+            # 2. If account matches in groundtruthbots.csv
             return author in bot_accounts
         
-        # BotのPRを除外（ベクトル化）
+        # Exclude bot PRs (vectorized)
         original_count = len(df_pull_request)
         df_filtered = df_pull_request[~df_pull_request['author'].apply(is_bot_author_vectorized)]
         filtered_count = len(df_filtered)
@@ -317,14 +317,14 @@ def filter_bot_prs(df_pull_request: pd.DataFrame, logger=None) -> pd.DataFrame:
         return df_pull_request
 
 def _get_template_context(repository_id: int):
-    """テンプレート/抽出器のコンテキストを遅延初期化して返す（repository_idごとに管理）。"""
+    """Lazily initialize and return template/extractor context (managed per repository_id)."""
     global _template_context_cache
     
-    # メモリキャッシュをチェック（repository_idごとに管理）
+    # Check memory cache (managed per repository_id)
     if repository_id in _template_context_cache:
         return _template_context_cache[repository_id]
     
-    # 永続化されたキャッシュをチェック
+    # Check persistent cache
     repo = repository_by_id(repository_id)
     persistent_template_cache = _load_description_without_template_cache(repo)
     if persistent_template_cache is not None:
@@ -334,7 +334,7 @@ def _get_template_context(repository_id: int):
         }
         return _template_context_cache[repository_id]
 
-    # キャッシュがない場合は空のキャッシュを返す
+    # Return empty cache if no cache exists
     _template_context_cache[repository_id] = {
         "pr_description_without_template": {},
         "issue_description_without_template": {},
@@ -343,12 +343,12 @@ def _get_template_context(repository_id: int):
 
 def extract_template_content_for_single_text(description: str, description_html: str, created_at: DateTime, content_type: ContentType, repository_id: int, pr_or_issue_id: str, logger=None, max_retries: int = 2) -> str:
     """
-    テンプレート抽出を実行（リトライ機能付き）
+    Execute template extraction (with retry functionality)
     
     Args:
-        max_retries: 最大リトライ回数（デフォルト: 2 = 初回 + 1回リトライ）
+        max_retries: Maximum number of retries (default: 2 = initial attempt + 1 retry)
     """
-    # 安全にログ出力するヘルパー関数
+    # Helper function to safely log
     def safe_log(msg):
         try:
             log_func = get_log_func(logger=logger, error=True)
@@ -358,9 +358,9 @@ def extract_template_content_for_single_text(description: str, description_html:
             print(f"Logger error: {log_error}", file=sys.stderr)
     
     last_exception = None
-    use_cpu_mode = False  # GPU優先、OOM時のみCPUに切り替え
+    use_cpu_mode = False  # GPU priority, switch to CPU only on OOM
     
-    for attempt in range(max_retries + 1):  # 0, 1, 2... (max_retries + 1回試行)
+    for attempt in range(max_retries + 1):  # 0, 1, 2... (max_retries + 1 attempts)
         try:
             created_at = pd.to_datetime(created_at)
             ctx = _get_template_context(repository_id)
@@ -371,20 +371,20 @@ def extract_template_content_for_single_text(description: str, description_html:
             if pr_or_issue_id in extraction_cache:
                 return extraction_cache[pr_or_issue_id]
             
-            # TemplateExtractorを使用してテンプレート削除を実行
-            # GPU優先、OOM時のみCPUに切り替え
-            # repository_idごとにキャッシュしてメモリ効率を向上
+            # Execute template removal using TemplateExtractor
+            # GPU priority, switch to CPU only on OOM
+            # Cache per repository_id to improve memory efficiency
             global _template_extractor_cache
-            device = 'cpu' if use_cpu_mode else None  # Noneで自動選択（CUDAが利用可能ならGPU、そうでなければCPU）
+            device = 'cpu' if use_cpu_mode else None  # None for auto-select (GPU if CUDA available, otherwise CPU)
             cache_key_extractor = f"{repository_id}_{device}"
             if cache_key_extractor not in _template_extractor_cache:
                 _template_extractor_cache[cache_key_extractor] = TemplateExtractor(device=device)
             extractor = _template_extractor_cache[cache_key_extractor]
             
-            # Repositoryオブジェクトを取得
+            # Get Repository object
             repo = repository_by_id(repository_id)
             
-            # テンプレート削除を実行（HTMLコンテンツが提供されている場合はそれを使用）
+            # Execute template removal (use HTML content if provided)
             extracted_result = extractor.extract_unique_content(
                 repo,
                 description,
@@ -392,14 +392,14 @@ def extract_template_content_for_single_text(description: str, description_html:
                 created_at,
                 content_type,
             )
-            # 抽出結果を取得（抽出に失敗した場合は元のテキストを使用）
+            # Get extraction result (use original text if extraction fails)
             extracted_text = extracted_result.get("extracted", description)
             
-            # 結果をキャッシュに追加
+            # Add result to cache
             extraction_cache[pr_or_issue_id] = extracted_text
             ctx[cache_key] = extraction_cache
             
-            # 永続化キャッシュにも保存
+            # Also save to persistent cache
             _save_description_without_template_cache(repository_id, ctx, logger=logger)
 
             return extracted_text
@@ -408,9 +408,9 @@ def extract_template_content_for_single_text(description: str, description_html:
             last_exception = e
             error_str = str(e)
             
-            # 最後の試行でなければ、適切な処理を行ってリトライ
+            # If not final attempt, perform appropriate handling and retry
             if attempt < max_retries:
-                # CUDAメモリ不足エラーの場合はメモリをクリア
+                # Clear memory if CUDA out of memory error
                 if "CUDA" in error_str and "out of memory" in error_str:
                     safe_log(f"CUDA out of memory error (attempt {attempt + 1}/{max_retries + 1}): {error_str}")
                     if TORCH_AVAILABLE and torch.cuda.is_available():
@@ -420,36 +420,36 @@ def extract_template_content_for_single_text(description: str, description_html:
                         except Exception as cache_error:
                             safe_log(f"Failed to clear CUDA cache: {cache_error}")
                     
-                    # CPUモードに切り替えて再試行
+                    # Switch to CPU mode and retry
                     if not use_cpu_mode:
                         use_cpu_mode = True
                         safe_log("Switching to CPU mode due to CUDA out of memory error...")
-                        # 既存のGPUエクストラクタをクリアしてメモリを解放
+                        # Clear existing GPU extractor to free memory
                         old_cache_key = f"{repository_id}_{None}"
                         if old_cache_key in _template_extractor_cache:
                             del _template_extractor_cache[old_cache_key]
                     else:
                         safe_log("Retrying in CPU mode...")
                     
-                    # リトライのためにループを継続
+                    # Continue loop for retry
                     continue
-                # データベース接続エラーの場合は接続をリセット
+                # Reset connection if database connection error
                 elif "Can't reconnect until invalid transaction is rolled back" in error_str:
                     safe_log(f"Database connection error (attempt {attempt + 1}/{max_retries + 1}), resetting connection: {error_str}")
                     reset_database_connection()
                     safe_log("Database connection reset, retrying...")
-                    # リトライのためにループを継続
+                    # Continue loop for retry
                     continue
                 else:
                     safe_log(f"Error extracting template content (attempt {attempt + 1}/{max_retries + 1}): {error_str}")
                     safe_log("Retrying...")
-                    # リトライのためにループを継続
+                    # Continue loop for retry
                     continue
             else:
-                # 最後の試行でも失敗した場合
+                # If failed on final attempt
                 safe_log(f"Failed to extract template content after {max_retries + 1} attempts")
                 
-                # CUDAメモリ不足エラーの場合はメモリをクリアしてから終了
+                # Clear memory and exit if CUDA out of memory error
                 if "CUDA" in error_str and "out of memory" in error_str:
                     safe_log(f"CUDA out of memory error (final attempt): {error_str}")
                     if TORCH_AVAILABLE and torch.cuda.is_available():
@@ -458,7 +458,7 @@ def extract_template_content_for_single_text(description: str, description_html:
                             safe_log("Cleared CUDA cache before exit")
                         except Exception as cache_error:
                             safe_log(f"Failed to clear CUDA cache: {cache_error}")
-                # データベース接続エラーの場合は接続をリセットしてから終了
+                # Reset connection and exit if database connection error
                 elif "Can't reconnect until invalid transaction is rolled back" in error_str:
                     safe_log(f"Database connection error (final attempt): {error_str}")
                     reset_database_connection()
@@ -466,10 +466,10 @@ def extract_template_content_for_single_text(description: str, description_html:
                 else:
                     safe_log(f"Error extracting template content (final attempt): {error_str}")
                 
-                # 全ての試行が失敗した場合は処理を終了
+                # Exit if all attempts failed
                 sys.exit(1)
     
-    # この行には到達しないはずだが、念のため
+    # Should not reach here, but just in case
     if last_exception:
         safe_log(f"Unexpected error: {last_exception}")
         sys.exit(1)
@@ -478,17 +478,17 @@ def extract_template_content_for_single_text(description: str, description_html:
 
 def _clean_description_text(text: str) -> str:
     """
-    descriptionから不要なテキスト（URL）を除去
+    Remove unnecessary text (URLs) from description
     """
     if not text:
         return ""
     
-    # URLを除去（http://、https://、ftp://、www.など）
-    # すべてのURLを削除（GitHubのissue/PRへのリンクも含む）
+    # Remove URLs (http://, https://, ftp://, www., etc.)
+    # Remove all URLs (including links to GitHub issues/PRs)
     url_patterns = [
-        r'https?://[^\s]+',  # http:// または https://
+        r'https?://[^\s]+',  # http:// or https://
         r'ftp://[^\s]+',     # ftp://
-        r'www\.[^\s]+',      # www.で始まるURL
+        r'www\.[^\s]+',      # URLs starting with www.
     ]
     
     for pattern in url_patterns:
@@ -496,10 +496,10 @@ def _clean_description_text(text: str) -> str:
         for match in reversed(matches):
             text = text[:match.start()] + text[match.end():]
     
-    # 連続する空白を1つに
+    # Normalize consecutive spaces to one
     text = re.sub(r'\s+', ' ', text)
     
-    # 前後の空白を削除
+    # Remove leading and trailing whitespace
     text = text.strip()
     
     return text
@@ -509,26 +509,26 @@ def resolve_description_links(repository_id: int, description: str, description_
     
     enhanced_description = description
     
-    # hrefパターンを探す正規表現
+    # Regex pattern to find href patterns
     data_url_pattern = r'href="([^"]*)"'
     
-    # 1つのprもしくはissue内における処理済みのURLを追跡
+    # Track processed URLs within one PR or issue
     processed_urls = set()
     
-    # 全てのhrefを一度に取得（位置情報も含む）
+    # Get all hrefs at once (including position information)
     matches = list(re.finditer(data_url_pattern, description_html))
     
-    # 後ろから前へ処理することで、文字列位置のずれを防ぐ
+    # Process from back to front to prevent string position shifts
     for match in reversed(matches):
         url = match.group(1)
         
-        # 既に処理済みのURLはスキップ
+        # Skip already processed URLs
         if url in processed_urls:
             continue
             
         processed_urls.add(url)
         
-        # issue/number パターンをチェック
+        # Check issue/number pattern
         issue_match = re.search(r'issues/(\d+)', url)
         if issue_match:
             issue_number = int(issue_match.group(1))
@@ -537,7 +537,7 @@ def resolve_description_links(repository_id: int, description: str, description_
             )
             enhanced_description += issue_info
         
-        # pull/number パターンをチェック
+        # Check pull/number pattern
         pull_match = re.search(r'pull/(\d+)', url)
         if pull_match:
             pull_number = int(pull_match.group(1))
@@ -546,7 +546,7 @@ def resolve_description_links(repository_id: int, description: str, description_
             )
             enhanced_description += pr_info
     
-    # クリーンアップ処理を適用
+    # Apply cleanup processing
     enhanced_description = _clean_description_text(enhanced_description)
     
     return enhanced_description
@@ -555,17 +555,17 @@ def resolve_description_links(repository_id: int, description: str, description_
 def _process_issue_reference(repository_id: int, issue_number: int, processed_refs: set, logger=None) -> str:
     issue_ref = f"issue_#{issue_number}"
     
-    # 循環参照チェック
+    # Check for circular reference
     if issue_ref in processed_refs:
         return ""
         
     try:
         issue = data_getter.issue_by_number(repository_id, issue_number)
         if issue:
-            # 処理済み参照に追加
+            # Add to processed references
             processed_refs.add(issue_ref)
             
-            # まずテンプレート削除を適用
+            # First apply template removal
             description_without_template = extract_template_content_for_single_text(
                 issue.bodyText,
                 issue.bodyHtml,
@@ -576,13 +576,13 @@ def _process_issue_reference(repository_id: int, issue_number: int, processed_re
                 logger=logger,
             )
                         
-            # テンプレート削除後のbodyHtmlに対してリンク解決を実行
-            # テンプレート削除後のbodyTextを使用してリンク解決を行う
+            # Execute link resolution on bodyHtml after template removal
+            # Use bodyText after template removal for link resolution
             processed_issue_body = resolve_description_links(
                 repository_id, 
                 description_without_template, 
-                issue.bodyHtml,  # bodyHtmlは元のまま使用（hrefが含まれているため）
-                processed_refs.copy(),  # コピーを渡して循環参照を防ぐ
+                issue.bodyHtml,  # Use original bodyHtml (contains href)
+                processed_refs.copy(),  # Pass copy to prevent circular references
                 logger=logger,
             )
                         
@@ -595,36 +595,36 @@ def _process_issue_reference(repository_id: int, issue_number: int, processed_re
 def _process_pull_request_reference(repository_id: int, pull_number: int, processed_refs: set, logger=None) -> str:
     pr_ref = f"pull_request_#{pull_number}"
     
-    # 循環参照チェック
+    # Check for circular reference
     if pr_ref in processed_refs:
         return ""
         
     try:
         pull_request = data_getter.pull_request_by_number(repository_id, pull_number)
         if pull_request:
-            # 処理済み参照に追加
+            # Add to processed references
             processed_refs.add(pr_ref)
             
-            # まずテンプレート削除を適用
+            # First apply template removal
             description_without_template = extract_template_content_for_single_text(
                 pull_request.bodyText,
                 pull_request.bodyHtml,
                 pull_request.created_at,
                 ContentType.PR,
                 repository_id,
-                pull_request.id,  # PRのIDを渡す
+                pull_request.id,  # Pass PR ID
                 logger=logger,
             )
             
             description_without_template = description_without_template or ""
             
-            # テンプレート削除後のbodyHtmlに対してリンク解決を実行
-            # テンプレート削除後のbodyTextを使用してリンク解決を行う
+            # Execute link resolution on bodyHtml after template removal
+            # Use bodyText after template removal for link resolution
             processed_pr_body = resolve_description_links(
                 repository_id, 
                 description_without_template, 
-                pull_request.bodyHtml,  # bodyHtmlは元のまま使用（hrefが含まれているため）
-                processed_refs.copy(),  # コピーを渡して循環参照を防ぐ
+                pull_request.bodyHtml,  # Use original bodyHtml (contains href)
+                processed_refs.copy(),  # Pass copy to prevent circular references
                 logger=logger,
             )
             

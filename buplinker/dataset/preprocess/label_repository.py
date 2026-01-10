@@ -1,5 +1,5 @@
 """
-Repositoryにgenreを使用してcategoryをラベル付けし、データベースに保存するスクリプト
+Script to label repository with category using genre and save to database
 """
 import sys
 from pathlib import Path
@@ -68,12 +68,12 @@ CATEGORY_MAP = {
 
 
 def label_repository_with_category(repo_id: int) -> None:
-    # データベースセッションを作成
+    # Create database session
     Session = sessionmaker(engine)
     session = Session()
     
     try:
-        # リポジトリを取得
+        # Get repository
         repo = session.query(Repository).filter(Repository.id == repo_id).first()
         category = SANER_CATEGORY_MAP[repo.genre]
 

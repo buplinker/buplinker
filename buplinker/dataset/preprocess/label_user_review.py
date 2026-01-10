@@ -1,5 +1,5 @@
 """
-User reviewsにARdocを使用してラベル付けを行い、データベースに保存するスクリプト
+Script to label user reviews with ARdoc and save to database
 """
 import os
 import sys
@@ -18,7 +18,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy import update
 from tqdm import tqdm
 
-# ARdoc Javaプログラムのパス
+# Path to ARdoc Java program
 ARDOC_DIR = ROOT_DIR / "ARdoc_API" / "ARdocExample"
 ARDOC_CLASSPATH = f"bin:../ARdoc_API.jar:../lib/*"
 ARDOC_CLASS = "runARdoc.ExampleOfUseARdoc"
@@ -28,8 +28,8 @@ def classify_text_with_ardoc(text: str) -> Optional[str]:
     if not text or not text.strip():
         return None
     
-    # Javaプログラムの実行
-    # subprocessは自動的にエスケープしてくれるので、そのまま渡す
+    # Execute Java program
+    # subprocess automatically escapes, so pass directly
     cmd = [
         'java',
         '-cp', ARDOC_CLASSPATH,
@@ -37,7 +37,7 @@ def classify_text_with_ardoc(text: str) -> Optional[str]:
         text
     ]
     
-    # ARdocディレクトリに移動して実行
+    # Change to ARdoc directory and execute
     original_dir = os.getcwd()
     try:
         os.chdir(ARDOC_DIR)
@@ -53,7 +53,7 @@ def classify_text_with_ardoc(text: str) -> Optional[str]:
             print(f"Error: ARdoc classification failed: {result.stderr}")
             return None
         
-        # 標準出力から結果を取得
+        # Get result from stdout
         output = result.stdout.strip()
         if not output:
             return None
@@ -68,7 +68,7 @@ def classify_text_with_ardoc(text: str) -> Optional[str]:
 
 
 def label_user_reviews_with_ardoc(repo_id: int, skip_labeled: bool = True) -> None:    
-    # user reviewsを取得
+    # Get user reviews
     _, df_user_review, _ = load_data(repo_id)
     
     if df_user_review.empty:
@@ -77,7 +77,7 @@ def label_user_reviews_with_ardoc(repo_id: int, skip_labeled: bool = True) -> No
     
     print(f"Found {len(df_user_review)} user reviews")
     
-    # 既にintentionが設定されているレビューをスキップ
+    # Skip reviews that already have intention set
     if skip_labeled:
         df_user_review = df_user_review[df_user_review['intention'].isna()]
         print(f"After filtering (skipping already labeled): {len(df_user_review)} reviews to process")
@@ -86,7 +86,7 @@ def label_user_reviews_with_ardoc(repo_id: int, skip_labeled: bool = True) -> No
         print("No reviews to process.")
         return
     
-    # データベースセッションを作成
+    # Create database session
     Session = sessionmaker(engine)
     session = Session()
     
@@ -94,19 +94,19 @@ def label_user_reviews_with_ardoc(repo_id: int, skip_labeled: bool = True) -> No
         updated_count = 0
         error_count = 0
         
-        # 各レビューを処理
+        # Process each review
         for _, row in tqdm(df_user_review.iterrows(), total=len(df_user_review), desc="Labeling reviews"):
             review_id = str(row['id'])
             content = str(row['content']) if pd.notna(row['content']) else ""
             
             if not content or not content.strip():
-                # 空のコンテンツの場合はNoneを設定
+                # Set None for empty content
                 categories = None
             else:
-                # ARdocで分類
+                # Classify with ARdoc
                 categories = classify_text_with_ardoc(content)
             
-            # データベースを更新
+            # Update database
             try:
                 stmt = (
                     update(UserReview)
@@ -116,7 +116,7 @@ def label_user_reviews_with_ardoc(repo_id: int, skip_labeled: bool = True) -> No
                 session.execute(stmt)
                 updated_count += 1
                 
-                # 100件ごとにコミット（パフォーマンス向上のため）
+                # Commit every 100 items (for performance improvement)
                 if updated_count % 100 == 0:
                     session.commit()
                     
@@ -125,7 +125,7 @@ def label_user_reviews_with_ardoc(repo_id: int, skip_labeled: bool = True) -> No
                 error_count += 1
                 session.rollback()
         
-        # 残りの変更をコミット
+        # Commit remaining changes
         session.commit()
         
         print(f"\nCompleted!")

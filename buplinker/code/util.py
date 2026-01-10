@@ -9,7 +9,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../.
 from root_util import GroupType
 
 def get_group_key(group_type=GroupType.UR_PR.value):
-    """group_typeに応じてグループ化のキーを返す"""
+    """Return grouping key according to group_type"""
     return 'ur_id' if group_type == GroupType.UR_PR.value else 'pr_id'
 
 def recall(ground_truth_data_frame, data_frame):
@@ -36,7 +36,7 @@ def NDCG_at_K(data_frame, k=1, group_type=GroupType.UR_PR.value):
         rank = 0
         for index, row in group.head(k).iterrows():
             rank += 1
-            # 正解のPRかどうかを判定（実際のデータに応じて調整が必要）
+            # Check if it's the correct PR (may need adjustment based on actual data)
             if hasattr(row, 'label') and row['label'] == 1:
                 dcg_sum += math.log(2)/math.log(rank+2) 
                 break 

@@ -1,12 +1,12 @@
 #!/bin/bash
 
-# スクリプトのディレクトリを取得
+# Get script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 echo "Starting process..."
 
 TOP_K=5
-LIMITED=false # trueはsaner用
+LIMITED=false # true is for saner
 
 if [ "$LIMITED" = "true" ]; then
   BASE_PATH="limited_years"
@@ -53,7 +53,7 @@ run_group () {
       --top_k "$TOP_K" \
       2>&1 | tee "$LOG_PATH"
 
-    # リポジトリの処理が完了したら、インデックスディレクトリ全体をクリーンアップ
+    # Clean up the entire index directory after processing the repository
     if [ -d "$INDEX_DIR" ]; then
       echo "Cleaning up index directory: $INDEX_DIR"
       rm -rf "$INDEX_DIR"
