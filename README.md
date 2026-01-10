@@ -148,16 +148,16 @@ buplinker/
 │       │   ├── label_user_review.py             # Label user reviews with ARdoc
 │       │   ├── label_repository.py              # Label repositories with categories
 │       │   ├── groundtruthbots.csv              # List of bot-generated PRs used during preprocessing
-│       │   ├── *template_titles.csv*            # Template title extraction results
+│       │   ├── template_titles.csv              # Template title extraction results
 │       │   ├── template_titles_repositories/    # Repository template titles (per repository)
 │       │   └── prompts/                         # LLM prompts for template extraction
 │       └── input_pairs/                  # Input pair datasets
 │           ├── pr_ur/                    # PR → UR candidate pairs
-│           │   ├── *limited_random.csv*  # Evaluation results of randomly sampled data
+│           │   ├── limited_random.csv    # Evaluation results of randomly sampled data
 │           │   ├── limited_years/        # First 4 years of data
 │           │   └── all_years/            # All available years
 │           └── ur_pr/                    # UR → PR candidate pairs
-│               ├── *limited_random.csv*  # Evaluation results of randomly sampled data
+│               ├── limited_random.csv    # Evaluation results of randomly sampled data
 │               ├── limited_years/        # First 4 years of data
 │               └── all_years/            # All available years
 ├── data_fetch/
