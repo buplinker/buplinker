@@ -27,8 +27,9 @@ curl -O https://dl.fbaipublicfiles.com/fasttext/supervised-models/lid.176.bin
 pip install -r requirements.txt
 
 # Extract pre-computed results
-tar -xJf buplinker/code/output.tar.xz
-
+tar xJf buplinker/code/output.tar.xz
+tar xJf analysis/timeline/time_processed_data/all_years.tar.xz
+tar xJf analysis/timeline/time_processed_data/limited_years.tar.xz
 ```
 
 ### 2. Configuration
@@ -110,10 +111,11 @@ cd buplinker/code && bash buplinker.sh
 
 ### 2. Data Formatting for Analysis
 
-Format the output into timeline-friendly data:
+If you have a MySQL server set up, format the output into timeline-friendly data.
+Otherwise, skip this step:
 
 ```bash
-python3 analysis/timeline/time_processed_data/create_timeline_data.py --limited
+cd ../.. && python3 analysis/timeline/time_processed_data/create_timeline_data.py --limited
 
 ```
 

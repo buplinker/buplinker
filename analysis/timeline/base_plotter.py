@@ -12,9 +12,8 @@ from scipy import stats as scipy_stats
 import sys
 
 sys.path.append(str(Path(__file__).parent.parent.parent))
-from root_util import ContentType, CategoryType, get_first_release_date_from_repository  # noqa: E402
+from root_util import ContentType, CategoryType, get_first_release_date_from_repository, target_csv_repos  # noqa: E402
 from data_fetch.database.tables import Repository
-from data_fetch.database.get import repositories
 from analysis.timeline.statistics_analyzer import StatisticsAnalyzer
 
 REFERENCE_YEARS_DEFAULT = 3.0
@@ -155,7 +154,7 @@ class BaseLinkedPlotter(ABC):
 
     def _get_repositories_by_category(self) -> Dict[CategoryType, List[Repository]]:
         """カテゴリごとにリポジトリを分類する"""
-        all_repos = repositories()
+        all_repos = target_csv_repos()
         category_repos = {CategoryType.Hedonic: [], CategoryType.Utilitarian: []}
         
         for repo in all_repos:
@@ -685,7 +684,8 @@ class BaseLinkedPlotter(ABC):
         ax.plot(x_line, y_line, color=CONTENT_TYPE_LINE_COLORS.get(content_type), linestyle="--", linewidth=LINE_STYLE_THEIL_SEN[0], alpha=LINE_STYLE_THEIL_SEN[1], label="Theil-Sen")
  
         legend_loc = LEGEND_LOCATIONS["labels"]
-        ax.legend(fontsize=LEGEND_FONT_SIZE, loc=legend_loc)
+        if not only_line:
+            ax.legend(fontsize=LEGEND_FONT_SIZE, loc=legend_loc)
     
     def _plot_categories_with_stats(
         self,
@@ -733,4 +733,5 @@ class BaseLinkedPlotter(ABC):
                         linestyle="--", linewidth=LINE_STYLE_THEIL_SEN[0], alpha=LINE_STYLE_THEIL_SEN[1], label=f"{CATEGORY_TYPE_LABELS.get(category)} Theil-Sen")
         
         legend_loc = LEGEND_LOCATIONS["labels"]
-        ax.legend(bbox_to_anchor=(1.5, 1), fontsize=LEGEND_FONT_SIZE, loc=legend_loc)
+        if not only_line:
+            ax.legend(bbox_to_anchor=(1.5, 1), fontsize=LEGEND_FONT_SIZE, loc=legend_loc)

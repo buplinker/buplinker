@@ -19,6 +19,8 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 LIMITED_YEARS = 3
 
+REPOSITOREIS = pd.read_csv(os.path.join(os.path.dirname(__file__), "data_fetch/database/tables/repositories.csv"))
+
 class ContentType(Enum):
     UR = "ur"
     PR = "pr"
@@ -44,6 +46,37 @@ def target_repos() -> list[Repository]:
             if y == "y":
                 repositories.append(repo)
         return repositories
+
+def target_csv_repos() -> list[Repository]:
+    repositories: list[Repository] = []
+    
+    for _, row in REPOSITOREIS.copy().iterrows():
+        repo = Repository(
+            id=int(row['id']) if pd.notna(row['id']) else None,
+            owner=str(row['owner']) if pd.notna(row['owner']) else None,
+            name=str(row['name']) if pd.notna(row['name']) else None,
+            github_url=str(row['github_url']) if pd.notna(row['github_url']) else None,
+            google_play_store_app_id=str(row['google_play_store_app_id']) if pd.notna(row['google_play_store_app_id']) else None,
+            google_play_store_url=str(row['google_play_store_url']) if pd.notna(row['google_play_store_url']) else None,
+            released=str(row['released']) if pd.notna(row['released']) else None,
+            category=str(row['category']) if pd.notna(row['category']) else None,
+        )
+        repositories.append(repo)
+    
+    return repositories
+
+def target_csv_repo_by_id(repo_id: int) -> Repository:
+    repo = REPOSITOREIS.copy()[REPOSITOREIS['id'] == repo_id].iloc[0]
+    return Repository(
+        id=repo['id'],
+        owner=repo['owner'],
+        name=repo['name'],
+        github_url=repo['github_url'],
+        google_play_store_app_id=repo['google_play_store_app_id'],
+        google_play_store_url=repo['google_play_store_url'],
+        released=repo['released'],
+        category=repo['category'],
+    )
 
 def load_data(repo_id: int) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     releases = data.releases(repo_id)
@@ -118,7 +151,7 @@ def filter_dataframe_by_date_range(df: pd.DataFrame, start_date: pd.Timestamp, e
 
 def get_first_release_date_from_repository(repo_id: int) -> Tuple[Optional[datetime], Optional[datetime]]:
     try:
-        repo = data.repository_by_id(repo_id)
+        repo = target_csv_repo_by_id(repo_id)
         if not repo or not repo.released or repo.released.strip() == '':
             return None, None
         

@@ -11,7 +11,7 @@ import sys
 import argparse
 
 sys.path.append(str(Path(__file__).parent.parent.parent))
-from root_util import ContentType, CategoryType, target_repos  # noqa: E402
+from root_util import ContentType, CategoryType, target_csv_repos  # noqa: E402
 from data_fetch.database.tables import Repository
 from analysis.timeline.base_plotter import BaseLinkedPlotter  # noqa: E402
 from analysis.timeline.statistics_analyzer import StatisticsAnalyzer  # noqa: E402
@@ -128,7 +128,7 @@ if __name__ == "__main__":
 
     plotter = LinkedTimePlotter(args.limited)
 
-    repos = target_repos()
+    repos = target_csv_repos()
     repo_entries: Dict[int, Dict[ContentType, Dict[str, Any]]] = {}
     combined_metric_df: Dict[ContentType, pd.DataFrame] = {}
     for repo in repos:
