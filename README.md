@@ -27,7 +27,6 @@ curl -O https://dl.fbaipublicfiles.com/fasttext/supervised-models/lid.176.bin
 pip install -r requirements.txt
 
 # Extract pre-computed results
-tar -xJf analysis/timeline/results.tar.xz
 tar -xJf buplinker/code/output.tar.xz
 
 ```
