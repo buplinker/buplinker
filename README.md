@@ -71,7 +71,7 @@ Proceed directly to [Run BUPLinker Execution](#1-run-buplinker-execution).
 
 If you want to fetch raw data and create your own tables, follow these steps:
 
-> **Note**: It may take 2 or 3 days to fetch all data and cost around $150 when running the full pipeline for all repositories
+> **Note**: It may take 2 or 3 days to fetch all data
 
 #### 1. Set Your MySQL Server
 
@@ -127,6 +127,7 @@ cd buplinker/code && bash buplinker.sh
 ```
 
 > **Note**: To switch between "limited" (4 years) and "all years", modify the `LIMITED` variable inside the `.sh` script.
+> **Note**: Running BUPLinker for all repositories will cost around $150
 
 ### 2. Data Formatting for Analysis
 
