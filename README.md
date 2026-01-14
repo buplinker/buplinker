@@ -25,11 +25,6 @@ curl -O https://dl.fbaipublicfiles.com/fasttext/supervised-models/lid.176.bin
 
 # Install required Python packages
 pip install -r requirements.txt
-
-# Extract pre-computed results
-tar xJf buplinker/code/output.tar.xz
-tar xJf analysis/timeline/time_processed_data/all_years.tar.xz
-tar xJf analysis/timeline/time_processed_data/limited_years.tar.xz
 ```
 
 ### 2. Configuration
@@ -48,19 +43,39 @@ OPENAI_API_KEY=your_api_key_here
 
 ### Option A: Quick Start (Using Pre-prepared Data)
 
-If you do not have a MySQL server, download the `input_pairs` dataset:
+If you do not have a MySQL server, follow these steps:
 
-1. Download from [Google Drive](https://drive.google.com/drive/folders/1eqfou_mbbqI0TqtCD8mk0l4BYTjavuxa?usp=drive_link).
-2. Place the folder according to the [Project Structure](#-project-structure).
-3. Proceed directly to [Run BUPLinker Execution](#1-run-buplinker-execution).
+#### 1. Extract Pre-computed Results
+
+Extract the compressed output files:
+
+```bash
+tar xJf buplinker/code/output.tar.xz
+tar xJf analysis/timeline/time_processed_data/all_years.tar.xz
+tar xJf analysis/timeline/time_processed_data/limited_years.tar.xz
+```
+
+#### 2. Download Input Pairs Dataset
+
+Download the `input_pairs` dataset from [Google Drive](https://drive.google.com/drive/folders/1eqfou_mbbqI0TqtCD8mk0l4BYTjavuxa?usp=drive_link).
+
+#### 3. Place Dataset Files
+
+Place the downloaded folder according to the [Project Structure](#-project-structure).
+
+#### 4. Proceed to Execution
+
+Proceed directly to [Run BUPLinker Execution](#1-run-buplinker-execution).
 
 ### Option B: Full Pipeline (From Scratch)
 
 If you want to fetch raw data and create your own tables, follow these steps:
 
+> **Note**: It may take 2 or 3 days to fetch all data
+
 #### 1. Set Your MySQL Server
 
-Set your MySQL credentials (MySQL URL and database name) in `project_config.py` if you have a MySQL server set up.
+Configure your MySQL credentials (URL, user name, password, and database name) in `project_config.py` if you have a MySQL server set up.
 
 #### 2. Database & Data Fetching
 

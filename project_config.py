@@ -2,6 +2,8 @@ import pandas as pd
 
 GITHUB_AUTH_TOKEN = "" # Your github auth token
 
+MYSQL_USER = "" # Your mysql user name
+MYSQL_PASSWORD = "" # Your mysql password
 MYSQL_HOST = "" # Your mysql url
 MYSQL_DATABASE = "" # Your mysql database name
 

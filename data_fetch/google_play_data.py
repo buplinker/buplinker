@@ -75,42 +75,8 @@ def fetch_reviews(repo: Repository) -> list:
         data_setter.add_user_reviews(user_reviews)
         print(f"{len(user_reviews)} user reviews inserted in {((time.time() - start) / 60):.2f} minutes!")
 
-def insert_repositories():
-    base_path = Path(__file__).parent
-    selected_repos = pd.read_csv(base_path / "saner_seart" / "seart_final.csv")
-    for _, repo in selected_repos.iterrows():
-        owner, repo_name = repo["name"].split("/")
-        google_play_store_app_id = repo["package_id"]
-
-        result = app(
-            google_play_store_app_id,
-            lang="en",
-            country="us"
-        )
-        if result:
-            data_setter.add_repository(
-                Repository(
-                    owner=owner, 
-                    name=repo_name, 
-                    github_url="https://github.com/" + repo["name"],
-                    google_play_store_app_id=google_play_store_app_id,
-                    google_play_store_url="https://play.google.com/store/apps/details?id=" + google_play_store_app_id + "&hl=en",
-                    genre=result["genre"],
-                    genre_id=result["genreId"],
-                    score=result["score"],
-                    version=result["version"],
-                    released=result["released"],
-                    installs=result["installs"],
-                    min_installs=result["minInstalls"],
-                    real_installs=result["realInstalls"],
-                    ratings=result["ratings"],
-                    reviews=result["reviews"],
-                    free=result["free"],
-                    updated=result["updated"],
-                ))
 
 if __name__ == "__main__":
-    insert_repositories()
     for repo in target_repos():
         print(f"{repo.id}: {repo.owner}.{repo.name}")
         print("Fetching app details.....")
