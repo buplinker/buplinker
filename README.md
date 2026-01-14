@@ -34,7 +34,7 @@ tar xJf analysis/timeline/time_processed_data/limited_years.tar.xz
 
 ### 2. Configuration
 
-* **GitHub & MySQL**: Set your GitHub Auth Token and MySQL credentials (user, password, host, database) in `project_config.py`.
+* **GitHub**: Set your GitHub Auth Token in `project_config.py`.
 * **OpenAI API**: Create a `.env` file in the root directory and add your key:
 ```text
 OPENAI_API_KEY=your_api_key_here
@@ -58,7 +58,11 @@ If you do not have a MySQL server, download the `input_pairs` dataset:
 
 If you want to fetch raw data and create your own tables, follow these steps:
 
-#### 1. Database & Data Fetching
+#### 1. Set Your MySQL Server
+
+Set your MySQL credentials (MySQL URL and database name) in `project_config.py` if you have a MySQL server set up.
+
+#### 2. Database & Data Fetching
 
 ```bash
 # Create database tables
@@ -71,7 +75,7 @@ python3 data_fetch/github_data.py
 
 ```
 
-#### 2. Preprocessing
+#### 3. Preprocessing
 
 Extract PR titles and templates for candidate selection:
 
@@ -82,7 +86,7 @@ python3 buplinker/dataset/preprocess/template_extractor.py
 
 * Output: `buplinker/dataset/preprocess/template_title_repositories/*`
 
-#### 3. Create Input Pairs
+#### 4. Create Input Pairs
 
 Filter candidate UR-PR pairs.
 
