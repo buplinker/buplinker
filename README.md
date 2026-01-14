@@ -187,11 +187,14 @@ buplinker/
 │   │   └── set.py                # Database write operations
 │   ├── github_data.py            # Fetch GitHub data (PRs, Issues, Releases)
 │   ├── google_play_data.py       # Fetch Google Play Store reviews
+│   ├── repositories.py           # Load repository data from CSV and add to database
 │   ├── template_fetcher.py       # Fetch PR/Issue templates from GitHub
-│   └── query_templates/          # GraphQL query templates for GitHub API
-│       ├── issues.graphql
-│       ├── pullRequests.graphql
-│       └── releases.graphql
+│   ├── query_templates/          # GraphQL query templates for GitHub API
+│   │   ├── issues.graphql        # GraphQL query for fetching GitHub issues
+│   │   ├── pullRequests.graphql  # GraphQL query for fetching GitHub pull requests
+│   │   └── releases.graphql      # GraphQL query for fetching GitHub releases
+│   └── tables/ 
+│       └── repositories.csv      # List of analyzed repositories                   
 ├── analysis/
 │   └── timeline/
 │       ├── linked_ratio.py              # Analyze linking ratio metrics
@@ -208,6 +211,5 @@ buplinker/
 │           └── linked_time/             # Linking time analysis results
 ├── project_config.py             # Configuration file (GitHub token, MySQL settings)
 ├── root_util.py                  # Root-level utility functions
-├── repositories.csv              # List of analyzed repositores
 └── requirements.txt              # Python dependencies
 ```
