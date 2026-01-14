@@ -1,7 +1,7 @@
 """
-MySQLデータをCSVに出力するスクリプト
+Script to export MySQL data to CSV
 
-データベース内のすべてのデータを加工せずにCSVファイルとして出力する。
+Exports all data in the database to CSV files without modification.
 """
 
 from pathlib import Path
@@ -151,6 +151,6 @@ if __name__ == "__main__":
     
     for repo in target_repos():
         print(f"{repo.id}: {repo.owner}.{repo.name}")
-        # TODO: アプリのバージョンと直近のリリース日を入れる
+        # TODO: Add app version and latest release date
         extract_all_data_into_csv(repo)
         print()

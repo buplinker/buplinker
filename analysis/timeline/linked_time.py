@@ -134,7 +134,7 @@ if __name__ == "__main__":
     for repo in repos:
         print(f"Processing {repo.id}: {repo.owner}.{repo.name}...")
 
-        # リポジトリごとのプロット
+        # Plot for each repository
         combined_entries: Dict[ContentType, Dict[str, Any]] = {}
         repo_entries[repo.id] = {}
         for content_type in (ContentType.UR, ContentType.PR):
@@ -146,10 +146,10 @@ if __name__ == "__main__":
             repo_entries[repo.id][content_type] = entry
         plotter.create_repo_ur_pr_plot(repo, combined_entries)
 
-    # 全リポジトリのプロット（個別リポジトリを薄く、平均を濃く）
+    # Plot for all repositories (individual repositories in light, average in bold)
     plotter.create_all_repos_with_individual_plot(repo_entries, combined_metric_df)
 
-    # 全リポジトリのプロット
+    # Plot for all repositories
     all_repo_entries: Dict[ContentType, Dict[str, Any]] = {}
     for content_type in (ContentType.UR, ContentType.PR):
         metrics_df = plotter.calculate_all_repos_linked_metrics(repos, content_type)
@@ -158,7 +158,7 @@ if __name__ == "__main__":
         all_repo_entries[content_type] = entry
     plotter.create_all_repos_ur_pr_plot(all_repo_entries)
 
-    # カテゴリごとのプロット
+    # Plot by category
     repo_entries_by_category: Dict[int, Dict[ContentType, Dict[CategoryType, Dict[str, Any]]]] = {}
     combined_entries: Dict[ContentType, Dict[CategoryType, Dict[str, Any]]] = {}
     for content_type in [ContentType.UR, ContentType.PR]:
@@ -175,11 +175,11 @@ if __name__ == "__main__":
             combined_entries[content_type][category] = entry
     plotter.create_category_comparison_plot(combined_entries)
 
-    # 全リポジトリのカテゴリごとのプロット
+    # Plot for all repositories by category
     plotter.create_ur_pr_plot_with_category_individual(repo_entries_by_category, combined_entries)
 
-    # 統計情報の計算
-    # アプリカテゴリ間の比較も行う
+    # Calculate statistics
+    # Also compare between app categories
     analyzer = StatisticsAnalyzer(metric_key="linked_time", limited=args.limited)
     metric_rows = []
     for content_type in [ContentType.UR, ContentType.PR]:
@@ -189,7 +189,7 @@ if __name__ == "__main__":
             metric_rows.append(row)
     analyzer.build_metric_combined_csv_summaries(metric_rows)
 
-    # アプリカテゴリごとの統計情報の計算
+    # Calculate statistics for each app category
     category_rows = []
     for category in [CategoryType.Hedonic, CategoryType.Utilitarian]:
         for content_type in [ContentType.UR, ContentType.PR]:

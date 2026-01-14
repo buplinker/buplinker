@@ -11,7 +11,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"
 from data_fetch.database import get as data
 from data_fetch.database.tables import UserReview, PullRequest, Release, Repository, PullRequestTemplate, Issue, IssueTemplate, engine
 
-# セッションを作成する
+# Create session
 Session = sessionmaker(engine)
 session = Session()
 

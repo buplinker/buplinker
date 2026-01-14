@@ -24,9 +24,9 @@ from buplinker.dataset.preprocess.preprocess_pr import _get_template_context
 base_path = Path(__file__).parent.parent.parent.parent
 
 def get_cached_pr_descriptions(repository_id: int, pr_ids: List[str]) -> List[str]:
-    """キャッシュされた前処理済みPRのdescriptionを取得"""
+    """Get cached preprocessed PR descriptions"""
     try:
-        # キャッシュから前処理済みデータを取得
+        # Get preprocessed data from cache
         template_context = _get_template_context(repository_id)
         pr_description_cache = template_context.get("pr_description_without_template", {})
         
@@ -35,7 +35,7 @@ def get_cached_pr_descriptions(repository_id: int, pr_ids: List[str]) -> List[st
             if pr_id in pr_description_cache:
                 cached_descriptions.append(pr_description_cache[pr_id])
             else:
-                # キャッシュにない場合は空文字列を返す
+                # Return empty string if not in cache
                 cached_descriptions.append("")
         
         return cached_descriptions

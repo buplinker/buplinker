@@ -91,7 +91,6 @@ class PullRequest(Base):
     commits = Column(Integer, nullable=False)
     changed_files = Column(Integer, nullable=False)
 
-    ur_pr_mappings = relationship("UserReviewPullRequestMapping", back_populates="pull_request")
     repository = relationship("Repository", back_populates="pull_requests")
 
 class PullRequestTemplate(Base):
@@ -161,28 +160,6 @@ class UserReview(Base):
     intention = Column(String(100))
 
     repository = relationship("Repository", back_populates="user_reviews")
-    ur_pr_mappings = relationship("UserReviewPullRequestMapping", back_populates="user_review")
-
-
-class UserReviewPullRequestMapping(Base):
-    __tablename__ = "user_review_pull_request_mappings"
-    __table_args__ = (
-        UniqueConstraint("user_review_id", "pull_request_id", name="uq_user_review_id_pull_request_id"),
-        {"mysql_charset": "utf8mb4"},
-    )
-    id = Column(Integer, primary_key=True, autoincrement=True)
-
-    # TODO: ur_textとpr_textを保存するか検討
-    user_review_id = Column(
-        String(100), ForeignKey("user_reviews.id", onupdate="CASCADE", ondelete="CASCADE"), nullable=False, index=True
-    )
-    pull_request_id = Column(
-        String(100), ForeignKey("pull_requests.id", onupdate="CASCADE", ondelete="CASCADE"), nullable=False, index=True
-    )
-    is_linked = Column(Integer, nullable=False) 
-
-    user_review = relationship("UserReview", back_populates="ur_pr_mappings")
-    pull_request = relationship("PullRequest", back_populates="ur_pr_mappings")
 
 
 if __name__ == "__main__":

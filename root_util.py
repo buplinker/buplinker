@@ -120,7 +120,7 @@ def load_data(repo_id: int) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
         for pr in pull_requests if pr.merged_at is not None and pr.created_at <= config.CUT_OFF_DATE
     ])
     
-    # 日付列をdatetime型に変換
+    # Convert date columns to datetime type
     if not df_release.empty:
         df_release['created_at'] = pd.to_datetime(df_release['created_at'])
         df_release['released_at'] = pd.to_datetime(df_release['released_at'])
@@ -140,11 +140,11 @@ def filter_dataframe_by_date_range(df: pd.DataFrame, start_date: pd.Timestamp, e
     if df.empty or date_column not in df.columns:
         return df
     
-    # 日付カラムをdatetime型に変換（errors='coerce'でパースできない値をNaNにし、警告を抑制）
+    # Convert date column to datetime type (errors='coerce' sets unparseable values to NaN and suppresses warnings)
     df = df.copy()
     df[date_column] = pd.to_datetime(df[date_column], errors='coerce')
     
-    # 日付範囲でフィルタリング（NaNは除外される）
+    # Filter by date range (NaN values are excluded)
     mask = (df[date_column] >= start_date) & (df[date_column] <= end_date)
     return df[mask].copy()
 
@@ -155,12 +155,12 @@ def get_first_release_date_from_repository(repo_id: int) -> Tuple[Optional[datet
         if not repo or not repo.released or repo.released.strip() == '':
             return None, None
         
-        # releasedカラムを日付に変換
+        # Convert released column to date
         start_date = pd.to_datetime(repo.released)
         if pd.isna(start_date):
             return None, None
         
-        # end_dateはstart_dateから3年後
+        # end_date is 3 years after start_date
         end_date = start_date + timedelta(days=365 * LIMITED_YEARS)
         
         return start_date, end_date

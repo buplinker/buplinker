@@ -153,7 +153,7 @@ class BaseLinkedPlotter(ABC):
         pass
 
     def _get_repositories_by_category(self) -> Dict[CategoryType, List[Repository]]:
-        """カテゴリごとにリポジトリを分類する"""
+        """Categorize repositories by category"""
         all_repos = target_csv_repos()
         category_repos = {CategoryType.Hedonic: [], CategoryType.Utilitarian: []}
         
