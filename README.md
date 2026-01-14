@@ -59,9 +59,16 @@ tar xJf analysis/timeline/time_processed_data/limited_years.tar.xz
 
 Download the `input_pairs` dataset from [Google Drive](https://drive.google.com/drive/folders/1eqfou_mbbqI0TqtCD8mk0l4BYTjavuxa?usp=drive_link).
 
-#### 3. Place Dataset Files
+#### 3. Place and Extract Dataset Files
 
-Place the downloaded folder according to the [Project Structure](#-project-structure).
+Place the downloaded folder according to the [Project Structure](#-project-structure) and extract the compressed files:
+
+```bash
+tar xJf buplinker/dataset/input_pairs/ur_pr/all_years.tar.xz
+tar xJf buplinker/dataset/input_pairs/ur_pr/limited_years.tar.xz
+tar xJf buplinker/dataset/input_pairs/pr_ur/all_years.tar.xz
+tar xJf buplinker/dataset/input_pairs/pr_ur/limited_years.tar.xz
+```
 
 #### 4. Proceed to Execution
 
