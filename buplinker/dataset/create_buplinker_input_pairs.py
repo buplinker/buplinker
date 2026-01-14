@@ -22,6 +22,7 @@ sys.path.append(str(Path(__file__).parent.parent.parent))
 
 from root_util import target_repos, load_data, GroupType, filter_dataframe_by_date_range, get_first_release_date_from_repository
 from buplinker.dataset.preprocess.preprocess_pr import preprocess_pr_data
+import data_fetch.database.get as data
 
 NUMBER_OF_DATA_FOR_GROUND_TRUTH = 3
 THRESHOLD_DAYS = 365
@@ -359,6 +360,10 @@ def create_pairs(base_df: pd.DataFrame, target_df: pd.DataFrame, group_type: Gro
 
 def _process_single_repo_entry(args_tuple):
     repo, limited_mode = args_tuple
+    # Reset database session for this child process
+    # In multiprocessing (ProcessPoolExecutor), database connections from parent 
+    # process are not available in child processes. We need to create a new connection.
+    data.reset_session()
     print(f"{repo.id}: {repo.owner}.{repo.name}")
     extract_data(repo, limited_mode=limited_mode)
 

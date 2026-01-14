@@ -13,6 +13,37 @@ from data_fetch.database.tables import UserReview, PullRequest, Release, Reposit
 Session = sessionmaker(engine)
 session = Session()
 
+def reset_session():
+    """Reset the database session. Call this in child processes to create a new connection.
+    
+    In multiprocessing, database connections from parent process are not available 
+    in child processes. This function creates a new session with a fresh connection.
+    """
+    global session
+    # Invalidate the session first to avoid rollback attempts on invalid connections
+    try:
+        session.invalidate()
+    except Exception:
+        pass
+    
+    # Close existing session, ignoring any errors from invalid connections
+    try:
+        session.close()
+    except Exception:
+        # Ignore errors when closing invalid connections in child processes
+        pass
+    
+    # Dispose of the engine's connection pool to ensure fresh connections
+    # This is necessary because the connection pool from parent process is invalid in child processes
+    try:
+        engine.dispose()
+    except Exception:
+        # Ignore errors if engine disposal fails
+        pass
+    
+    # Create a new session with a fresh connection from the engine
+    session = Session()
+
 
 def repositories() -> list[Repository]:
     return session.query(Repository).all()
