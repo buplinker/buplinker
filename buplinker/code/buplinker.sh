@@ -6,12 +6,21 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 echo "Starting process..."
 
 TOP_K=5
-LIMITED=false # true is for saner
+LIMITED=true # true is for saner
+EVALUATION=false # true is for evaluation
 
-if [ "$LIMITED" = "true" ]; then
-  BASE_PATH="limited_years"
+if [ "$EVALUATION" = "true" ]; then
+  if [ "$LIMITED" = "true" ]; then
+    BASE_PATH="limited_random"
+  else
+    BASE_PATH="all_random"
+  fi  
 else
-  BASE_PATH="all_years"
+  if [ "$LIMITED" = "true" ]; then
+    BASE_PATH="limited_years"
+  else
+    BASE_PATH="all_years"
+  fi  
 fi
 
 # ===== Input Pairs =====
@@ -23,13 +32,25 @@ NAMES_GROUP5=(21_organicmaps.organicmaps 22_owncloud.android 23_owntracks.androi
 NAMES_GROUP6=(26_standardnotes.app 27_streetwriters.notesnook 28_tasks.tasks 29_wireapp.wire-android 30_xbmc.xbmc)
 NAMES_GROUP7=(31_zulip.zulip-flutter)
 
+NAMES_GROUP=(random)
+
 run_group () {
   local GROUP_TYPE="$1"
   shift 1
   local NAMES=("$@")
 
   for DATA_NAME in "${NAMES[@]}"; do
-    INPUT_PAIRS_DATA_PATH="${SCRIPT_DIR}/../dataset/input_pairs/${GROUP_TYPE}/${BASE_PATH}/${DATA_NAME}_input_pairs.csv"
+    # For evaluation mode with random_input_pairs, use the file directly without _input_pairs suffix
+    if [ "$EVALUATION" = "true" ]; then
+      if [ "$LIMITED" = "true" ]; then
+        FILENAME="limited_random_input_pairs.csv"
+      else
+        FILENAME="all_random_input_pairs.csv"
+      fi
+      INPUT_PAIRS_DATA_PATH="${SCRIPT_DIR}/../dataset/input_pairs/${GROUP_TYPE}/${BASE_PATH}/${FILENAME}"
+    else
+      INPUT_PAIRS_DATA_PATH="${SCRIPT_DIR}/../dataset/input_pairs/${GROUP_TYPE}/${BASE_PATH}/${DATA_NAME}_input_pairs.csv"
+    fi
 
     echo "--------------------------------------"
     echo "Processing dataset: $DATA_NAME"
@@ -66,14 +87,19 @@ run_group () {
 
 # Run both groups for each GROUP_TYPE
 for GROUP_TYPE in "ur_pr" "pr_ur"; do
-  run_group "$GROUP_TYPE" "${NAMES_GROUP1[@]}"
-  run_group "$GROUP_TYPE" "${NAMES_GROUP2[@]}"
-  run_group "$GROUP_TYPE" "${NAMES_GROUP3[@]}"
-  run_group "$GROUP_TYPE" "${NAMES_GROUP4[@]}"
-  run_group "$GROUP_TYPE" "${NAMES_GROUP5[@]}"
-  run_group "$GROUP_TYPE" "${NAMES_GROUP6[@]}"
-  run_group "$GROUP_TYPE" "${NAMES_GROUP7[@]}"
+  if [ "$EVALUATION" = "true" ]; then
+    # For evaluation mode, use random_input_pairs.csv
+    run_group "$GROUP_TYPE" "${NAMES_GROUP[@]}"
+  else
+    # For normal mode, process individual repositories
+    run_group "$GROUP_TYPE" "${NAMES_GROUP1[@]}"
+    run_group "$GROUP_TYPE" "${NAMES_GROUP2[@]}"
+    run_group "$GROUP_TYPE" "${NAMES_GROUP3[@]}"
+    run_group "$GROUP_TYPE" "${NAMES_GROUP4[@]}"
+    run_group "$GROUP_TYPE" "${NAMES_GROUP5[@]}"
+    run_group "$GROUP_TYPE" "${NAMES_GROUP6[@]}"
+    run_group "$GROUP_TYPE" "${NAMES_GROUP7[@]}"
+  fi
 done
-
 echo "--------------------------------------"
 echo "All datasets processed."

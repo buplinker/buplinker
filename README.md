@@ -129,7 +129,7 @@ python3 buplinker/dataset/create_buplinker_input_pairs.py --limited
 Apply the linking algorithm to the prepared input pairs:
 
 ```bash
-cd buplinker/code && bash buplinker.sh
+bash ./buplinker/code/buplinker.sh
 
 ```
 
@@ -142,7 +142,7 @@ If you have a MySQL server set up, format the output into timeline-friendly data
 Otherwise, skip this step:
 
 ```bash
-cd ../.. && python3 analysis/timeline/time_processed_data/create_timeline_data.py --limited
+python3 analysis/timeline/time_processed_data/create_timeline_data.py --limited
 
 ```
 
@@ -154,6 +154,28 @@ Generate the final statistics for linked ratio and time:
 | --- | --- | --- |
 | **Analyze Linked Ratio** | `python3 analysis/timeline/linked_ratio.py --limited` | `analysis/timeline/results/linked_ratio/` |
 | **Analyze Linked Time** | `python3 analysis/timeline/linked_time.py --limited` | `analysis/timeline/results/linked_time/` |
+
+---
+
+## 📘 How to Evaluate BUPLinker
+
+Execute BUPLinker to perform UR→PR and PR→UR link prediction and evaluation based on the generated CSV files.
+
+The predicted link results are saved as CSV/JSON files.  
+Evaluation metrics (precision, recall, F1, etc.) are output to stdout and log files.
+
+**Before running**, edit `buplinker/code/buplinker.sh` and set the following variables:
+
+* `EVALUATION=true`: Enable evaluation mode (outputs evaluation metrics).
+* `LIMITED=true`: Uses the first four years of data (limited_random).
+
+Then run:
+
+```bash
+bash ./buplinker/code/buplinker.sh
+```
+
+* Output: `buplinker/code/output/{group_type}/limited_random/` or `buplinker/code/output/{group_type}/all_random/`
 
 ---
 
