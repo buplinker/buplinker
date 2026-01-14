@@ -201,15 +201,15 @@ buplinker/
 │       │   ├── template_titles.csv              # Template title extraction results
 │       │   ├── template_titles_repositories/    # Repository template titles (per repository)
 │       │   └── prompts/                         # LLM prompts for template extraction
-│       └── input_pairs/                  # Input pair datasets
-│           ├── pr_ur/                    # PR → UR candidate pairs
-│           │   ├── limited_random.csv    # Evaluation results of randomly sampled data
-│           │   ├── limited_years/        # First 4 years of data
-│           │   └── all_years/            # All available years
-│           └── ur_pr/                    # UR → PR candidate pairs
-│               ├── limited_random.csv    # Evaluation results of randomly sampled data
-│               ├── limited_years/        # First 4 years of data
-│               └── all_years/            # All available years
+│       └── input_pairs/                              # Input pair datasets
+│           ├── pr_ur/                                # PR → UR candidate pairs
+│           │   ├── limited_random_input_pairs.csv    # Evaluation results of randomly sampled data
+│           │   ├── limited_years/                    # First 4 years of data
+│           │   └── all_years/                        # All available years
+│           └── ur_pr/                                # UR → PR candidate pairs
+│               ├── limited_random_input_pairs.csv    # Evaluation results of randomly sampled data
+│               ├── limited_years/                    # First 4 years of data
+│               └── all_years/                        # All available years
 ├── data_fetch/
 │   ├── database/
 │   │   ├── tables.py             # Database schema definitions
